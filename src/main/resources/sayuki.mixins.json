@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.xiaoxue.sayuki.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "sayuki.refmap.json",
+  "mixins": [],
+  "client": [
+    "ItemInHandRendererMixin"
+  ],
+  "server": []
+}

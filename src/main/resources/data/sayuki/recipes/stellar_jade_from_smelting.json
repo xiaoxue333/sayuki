@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": {
+    "item": "sayuki:raw_stellar_jade"
+  },
+  "result": "sayuki:stellar_jade",
+  "experience": 30.0,
+  "cookingtime": 200
+}

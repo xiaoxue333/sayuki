@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "G  ",
+    " S ",
+    "  T"
+  ],
+  "key": {
+    "G": {
+      "item": "sayuki:stellar_jade_gem"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "T": {
+      "item": "minecraft:string"
+    }
+  },
+  "result": {
+    "item": "sayuki:frusta_dominate",
+    "count": 1
+  }
+}

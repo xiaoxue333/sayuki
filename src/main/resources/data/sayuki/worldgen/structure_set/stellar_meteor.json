@@ -1,0 +1,14 @@
+{
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 724951234,
+    "separation": 8,
+    "spacing": 36
+  },
+  "structures": [
+    {
+      "structure": "sayuki:stellar_meteor",
+      "weight": 1
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sayuki:stellar_jade"
+    },
+    {
+      "item": "sayuki:stellar_jade"
+    },
+    {
+      "item": "sayuki:stellar_jade"
+    },
+    {
+      "item": "sayuki:stellar_jade"
+    }
+  ],
+  "result": {
+    "item": "sayuki:stellar_jade_gem",
+    "count": 1
+  }
+}

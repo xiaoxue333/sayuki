@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "BBB",
+    "BIB",
+    "GBB"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:blue_ice"
+    },
+    "I": {
+      "item": "minecraft:iron_sword"
+    },
+    "G": {
+      "item": "sayuki:stellar_jade_gem"
+    }
+  },
+  "result": {
+    "item": "sayuki:azure_sword",
+    "count": 1
+  }
+}

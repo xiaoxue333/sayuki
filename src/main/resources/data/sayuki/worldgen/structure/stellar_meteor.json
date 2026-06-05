@@ -1,0 +1,6 @@
+{
+  "type": "sayuki:stellar_meteor",
+  "biomes": "#sayuki:has_stellar_meteor",
+  "spawn_overrides": {},
+  "step": "surface_structures"
+}

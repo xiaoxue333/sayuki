@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "sayuki:item/raw_stellar_jade"
+  }
+}
