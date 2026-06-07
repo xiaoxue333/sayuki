@@ -165,7 +165,7 @@
   "tooltip.sayuki.mini_regent.2": "§7内置冷却 %ss",
   "tooltip.sayuki.mini_regent.3": "§7若%ss没有攻击行为，失去积累的攻击力",
   "tooltip.sayuki.orange_dough.1": "§e遗物栏位 +2",
-  "tooltip.sayuki.vitruvian_minion.1": "§3ISS&Goety联动：§r§c召唤物造成的伤害 x%；s§r§a召唤物的最大生命 x%s",
+  "tooltip.sayuki.vitruvian_minion.1": "§3ISS&Goety联动：§r§c召唤物造成的伤害 x%1$s§r，§a召唤物的最大生命 x%2$s",
   
 
   "// ----- 遗物工具提示 — 亡灵契约师 -----": "",
