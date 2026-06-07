@@ -15,6 +15,31 @@ public class PhilosophersStone extends Item implements ICurioItem {
     }
 
     @Override
+    public boolean hasCraftingRemainingItem(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public ItemStack getCraftingRemainingItem(ItemStack stack) {
+        ItemStack result = stack.copy();
+        result.setDamageValue(result.getDamageValue() + 1);
+        if (result.getDamageValue() >= result.getMaxDamage()) {
+            return ItemStack.EMPTY;
+        }
+        return result;
+    }
+
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return 1;
+    }
+
+    @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level,
                                 List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);

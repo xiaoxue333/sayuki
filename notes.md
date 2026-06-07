@@ -1,6 +1,6 @@
 # Sayuki Mod 开发经验笔记
 
-> 上次更新: 2026-06-07 · 本次会话涉及：宝石面具、原初之爪、腌制活雾、选择悖论，以及领主阳伞副手缓降、卓越披风背饰、宝石面具头饰
+> 上次更新: 2026-06-07 · 本次会话涉及：DARV 剩余5遗物实装（添水、天鹅绒颈圈、贤者之石、星盘、潘多拉魔盒）、领主阳伞零元购重做、尘封魔典锻造模板修正
 
 ---
 
@@ -162,13 +162,18 @@
 
 ### MOD ID: `sayuki`
 
-### 遗物实装进度 (瓦库 10/10 全部完成):
-| 状态 | 遗物 |
-|------|------|
-| **瓦库已实装 (10)** | whispering_earring, blood_soaked_rose, choices_paradox, distinguished_cape, fiddle, jeweled_mask, lords_parasol, music_box, preserved_fog, sere_talon |
-| **非瓦库** | 另 13 个遗物（铁甲战士/静默猎手/储君/亡灵契约师/故障机器人），均已在之前会话实装 |
+### 遗物实装进度:
+| 角色 | 已实装/总数 | 数量 | 遗物 |
+|------|------------|------|------|
+| **铁甲战士** | 9/9 | 9 | burning_blood, black_blood, red_skull, paper_phrog, self_forming_clay, charons_ashes, demon_tongue, ruined_helmet, brimstone |
+| **静默猎手** | 9/9 | 9 | ring_of_the_snake, ring_of_the_drake, snecko_skull, tingsha, twisted_funnel, helical_dart, paper_krane, tough_bandages, ninja_scroll |
+| **储君** | 9/9 | 9 | divine_right, divine_destiny, fencing_manual, galactic_dust, regalite, lunar_pastry, mini_regent, orange_dough, vitruvian_minion |
+| **亡灵契约师** | 9/9 | 9 | bound_phylactery, phylactery_unbound, bone_flute, book_repair_knife, funerary_mask, big_hat, bookmark, ivory_tile, undying_sigil |
+| **故障机器人** | 9/9 | 9 | cracked_core, infused_core, gold_plated_cables, data_disk, symbiotic_virus, emotion_chip, metronome, runic_capacitor, power_cell |
+| **瓦库 (Vakuu)** | 10/10 | 10 | whispering_earring, blood_soaked_rose, choices_paradox, distinguished_cape, fiddle, jeweled_mask, lords_parasol, music_box, preserved_fog, sere_talon |
+| **达弗 DARV (囤积者)** | 12/12 | 12 | dusty_tome, empty_cage, ectoplasm, runic_pyramid, black_star, snecko_eye, calling_bell, sozu, velvet_choker, philosophers_stone, pandoras_box, astrolabe |
 
-> 总计 23 遗物全部实装完成。
+> 总计 **67/67** 遗物全部实装完成。
 
 ---
 
@@ -283,3 +288,89 @@
 
 ### 合成配方映射模式（选择悖论）
 9 个 shaped recipe，同一输入物品，不同位置对应不同产出。配方文件命名统一 `{output}_from_paradox.json`。
+
+---
+
+## 13. 本次会话新增/改动的遗物 (2026-06-07)
+
+### 13.1 空鸟笼 (EmptyCage)
+
+| 方面 | 内容 |
+|------|------|
+| **效果** | 佩戴时扫描玩家全身（盔甲+主手+副手+Curios饰品），移除最多 2 个诅咒附魔并存储到自身 NBT |
+| **诅咒检测** | `Enchantment.isCurse()` |
+| **存储格式** | `SayukiEmptyCageStored` (ListTag)，每项存 `id` + `lvl` |
+| **tooltip** | 已吸收时显示 `Curses absorbed:` + 附魔列表；未吸收时显示描述文字 |
+| **实现** | `tryAbsorbCurses()` 从 ModEventHandler.onCurioChange 调用；`collectPlayerCurses()` 遍历所有装备栏位和 Curios |
+| **参考** | Enigmatic-Addons 的暴戾卷轴 |
+
+### 13.2 异蛇之眼 (SneckoEye)
+
+| 方面 | 内容 |
+|------|------|
+| **弹射次数+2** | `onProjectileImpact` 中检测 SneckoEye → `maxBounces += 2`；同时将 early-return 条件扩展为 `!hasSnake && !hasDrake && !hasSnecko` |
+| **弹射交换** | 每次弹射前随机交换飞行物速度、伤害、剩余弹射次数；速度用 `arrow.setDeltaMovement(dir.scale(newSpeed))`，伤害用 `arrow.setBaseDamage()`，剩余次数调整 `maxBounces` |
+| **混乱效果** | 新增 `ConfusedPowerEffect`（注册为 `confused_power`，紫色 `#9370DB`，`HARMFUL`）；每次近战攻击时 `SneckoEye.applyConfused(player)` 将攻速设为 `0.0~3.0` 随机值（delta = random*3.0 - 4.0），并施加 3s 混乱效果作视觉提示 |
+| **攻速 UUID** | `SNECKO_SPEED_UUID`（仅一个，无 damage UUID） |
+| **卸下清理** | CurioChange 中调用 `SneckoEye.removeConfusedModifier(entity)` |
+
+### 13.3 灵体外质 (Ectoplasm)
+
+| 方面 | 内容 |
+|------|------|
+| **效果** | 每 1 秒扫描玩家背包（36格+盔甲+副手），清空所有绿宝石和绿宝石块并转化为经验 |
+| **经验值** | 绿宝石 = 4 XP/个，绿宝石块 = 36 XP/个 |
+| **SophisticatedBackpacks** | 配置项 `ectoplasmSophisticatedBackpacks`（默认 true）控制是否递归扫描背包内部；通过 `isSophisticatedBackpack()` 检测类名前缀，用 `ForgeCapabilities.ITEM_HANDLER` 读取内部物品 |
+| **触发** | `onPlayerTick` 中 `now % 20 == 0` 调用 `Ectoplasm.consumeEmeralds(player)` |
+| **Config** | `ectoplasmSophisticatedBackpacks` (BooleanValue, default true) |
+
+### 13.4 尘封魔典 → 锻造模板
+
+| 方面 | 内容 |
+|------|------|
+| **旧效果删除** | 移除 5 个无序合成升级配方（`*_from_tome.json`），移除"与其他遗物合成升级"的描述 |
+| **新效果** | 作为锻造模板使用：9 个 `smithing_transform` 配方（剑/镐/斧/锹/锄/头盔/胸甲/护腿/靴子），模板用 `sayuki:dusty_tome`，材料用 `netherite_ingot`，可将对应钻石装备升级为下界合金 |
+| **配方命名** | `netherite_{tool}_tome.json` |
+
+### 13.5 符文金字塔 (RunicPyramid)
+
+| 方面 | 内容 |
+|------|------|
+| **效果** | 佩戴后记录收到的**第一个**正面 buff（排除 sayuki 自定义效果），将其持续时间翻倍；该 buff 结束后才能记录下一个 |
+| **实现** | `onMobEffectAdded` 拦截 → `RunicPyramid.onEffectAdded()` 检测 `BENEFICIAL` 且非 sayuki → 存入 `PKEY_TRACKING` → 返回 `duration * 2` → 移除原效果重新添加 |
+| **过期回调** | `onMobEffectExpired` 匹配追踪 ID → 清除 `PKEY_TRACKING` |
+| **卸下清理** | `onUnequip` 清除追踪状态 |
+| **数据 key** | `SayukiRunicPyramidTracking` |
+
+### 13.6 黑星 (BlackStar)
+
+| 方面 | 内容 |
+|------|------|
+| **效果** | 击杀生物时从掉落物中随机选取一件复制，额外+1 掉落 |
+| **实现** | `onLivingDrops` (LivingDropsEvent) → 检测佩戴 → `event.getDrops()` 随机 `get()` → 复制 `ItemStack` → `add` 回列表 |
+
+### 13.7 召唤铃铛 (CallingBell)
+
+| 方面 | 内容 |
+|------|------|
+| **栏位+3** | 遵循 NinjaScroll/OrangeDough 模式：`onEquip` 中 `addTransientSlotModifiers`，`onUnequip` 中 `removeSlotModifiers` |
+| **绑定附魔** | `applyBindingEnchantments()` 遍历 `ForgeRegistries.ENCHANTMENTS`，匹配 ID 中 `bind`/`soulbound`/`soul_bind` → 全部附到物品上（等级 1）；通过 NBT `SayukiCallingBellEnchanted` 标记确保只执行一次 |
+| **触发时机** | `inventoryTick` 自动检测并附魔 |
+| **tooltip** | 仅一行"遗物栏位+3"，绑定附魔不显示 |
+
+---
+
+## 14. 新增设计模式
+
+### 锻造模板模式（尘封魔典）
+使用 `minecraft:smithing_transform` recipe type，template 为 mod 物品，可替代原版下界合金升级模板。配方数量 = 所有可升级装备类型。
+
+### 首buff翻倍模式（符文金字塔）
+`MobEffectEvent.Added` 拦截 → 判断分类和来源 → 存入追踪 ID → 用 `removeEffect` + `addEffect` 替换 duration。`MobEffectEvent.Expired` 回调清除追踪。
+
+### 掉落复制模式（黑星）
+`LivingDropsEvent` 中从 `Collection<ItemEntity>` 随机选一个 → `copy()` → 追加回集合。无需操作 ItemStack 本身。
+
+### 注册表扫描绑定附魔模式（召唤铃铛）
+`ForgeRegistries.ENCHANTMENTS` 遍历 → 按 `ResourceLocation` path 关键词匹配 → `EnchantmentHelper.setEnchantments` 批量写入。用 NBT 标记避免重复执行。
+

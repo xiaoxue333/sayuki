@@ -10,10 +10,18 @@ import com.xiaoxue.sayuki.compat.GoetyCompat;
 import com.xiaoxue.sayuki.compat.IronSpellsCompat;
 import com.xiaoxue.sayuki.damage.ModDamageTypes;
 import com.xiaoxue.sayuki.effect.ModEffects;
+import com.xiaoxue.sayuki.item.Astrolabe;
 import com.xiaoxue.sayuki.item.AzureSword;
+import com.xiaoxue.sayuki.item.EmptyCage;
 import com.xiaoxue.sayuki.item.FrustaDominate;
 import com.xiaoxue.sayuki.item.MagentaSpearItem;
 import com.xiaoxue.sayuki.item.ModItems;
+import com.xiaoxue.sayuki.item.PandorasBox;
+import com.xiaoxue.sayuki.item.SneckoEye;
+import com.xiaoxue.sayuki.item.Ectoplasm;
+import com.xiaoxue.sayuki.item.RunicPyramid;
+import com.xiaoxue.sayuki.item.Sozu;
+import com.xiaoxue.sayuki.item.VelvetChoker;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
@@ -36,6 +44,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
@@ -52,7 +61,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.ProjectileImpactEvent;
+import net.minecraftforge.event.entity.living.AnimalTameEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
@@ -72,6 +84,9 @@ import top.theillusivec4.curios.api.event.CurioChangeEvent;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = com.xiaoxue.sayuki.Sayuki.MOD_ID)
@@ -164,6 +179,9 @@ public class ModEventHandler {
     private static final String PKEY_DISTINGUISHED_CAPE_CHARGES = "SayukiDistinguishedCapeCharges";
     private static final String PKEY_DISTINGUISHED_CAPE_COOLDOWN = "SayukiDistinguishedCapeCooldown";
 
+    // Lords Parasol: detect menu transition to spawn items on every trade panel open
+    private static final String PKEY_PARASOL_LAST_MENU = "SayukiParasolLastMenu";
+
     // Fiddle: attack speed override
     private static final String PKEY_FIDDLE_EQUIPPED = "SayukiFiddleEquipped";
 
@@ -232,6 +250,26 @@ public class ModEventHandler {
         }
     }
 
+    // === LivingDrops: Black Star — duplicate one random drop ===
+
+    @SubscribeEvent
+    public static void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var blackStar = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BLACK_STAR.get()));
+        if (blackStar.isEmpty()) return;
+
+        var drops = new ArrayList<>(event.getDrops());
+        if (!drops.isEmpty()) {
+            ItemEntity chosen = drops.get(player.getRandom().nextInt(drops.size()));
+            ItemEntity extra = new ItemEntity(chosen.level(), chosen.getX(), chosen.getY(), chosen.getZ(),
+                    chosen.getItem().copy());
+            event.getDrops().add(extra);
+        }
+    }
+
     // === LivingEquipmentChange: Fiddle strips non-fiddle AS modifiers ===
 
     @SubscribeEvent
@@ -284,6 +322,7 @@ public class ModEventHandler {
                 event.setAmount(Float.MAX_VALUE);
             }
         }
+
     }
 
     // === LivingHurt: Undying Sigil — -50% damage from Doom-afflicted attackers ===
@@ -575,6 +614,13 @@ public class ModEventHandler {
             target.getPersistentData().putFloat("SayukiMusicBoxDmg", event.getAmount());
             target.getPersistentData().putString("SayukiMusicBoxOwner", player.getStringUUID());
         }
+
+        // ---- Snecko Eye: apply Confused Power (random attack speed 0~3) on each attack ----
+        var sneckoEye = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SNECKO_EYE.get()));
+        if (sneckoEye.isPresent()) {
+            SneckoEye.applyConfused(player);
+        }
     }
 
     // === ProjectileImpact: Ring of the Snake / Ring of the Drake — redirect AbstractArrow ===
@@ -606,10 +652,13 @@ public class ModEventHandler {
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.RING_OF_THE_SNAKE.get())).isPresent();
         boolean hasDrake = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.RING_OF_THE_DRAKE.get())).isPresent();
-        if (!hasSnake && !hasDrake) return;
+        boolean hasSnecko = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SNECKO_EYE.get())).isPresent();
+        if (!hasSnake && !hasDrake && !hasSnecko) return;
 
         int bounceCount = projectile.getPersistentData().getInt(PKEY_BOUNCE_COUNT);
         int maxBounces = hasDrake ? 6 : 2;
+        if (hasSnecko) maxBounces += 2;
         double retention = hasDrake ? 0.75 : 0.5;
 
         event.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
@@ -649,10 +698,31 @@ public class ModEventHandler {
                     .orElse(null);
 
             if (nextTarget != null) {
+                double bounceSpeed = 1.5;
+                // Snecko Eye: randomly shuffle projectile speed, damage, and remaining bounces
+                if (hasSnecko) {
+                    double speed = arrow.getDeltaMovement().length();
+                    double dmg = arrow.getBaseDamage();
+                    int remainingBounces = maxBounces - bounceCount;
+
+                    List<Double> vals = new ArrayList<>();
+                    vals.add(speed);
+                    vals.add(dmg);
+                    vals.add((double) remainingBounces);
+                    java.util.Collections.shuffle(vals);
+
+                    bounceSpeed = Math.max(0.3, vals.get(0));
+                    double newDmg = Math.max(0.5, vals.get(1));
+                    int newRemaining = Math.max(1, vals.get(2).intValue());
+
+                    arrow.setBaseDamage(newDmg);
+                    maxBounces = bounceCount + newRemaining;
+                }
+
                 Vec3 startPos = target.getEyePosition().add(0, -0.3, 0);
                 arrow.setPos(startPos.x, startPos.y, startPos.z);
                 Vec3 dir = nextTarget.getEyePosition().subtract(arrow.position()).normalize();
-                arrow.setDeltaMovement(dir.scale(1.5));
+                arrow.setDeltaMovement(dir.scale(bounceSpeed));
                 arrow.getPersistentData().putInt(PKEY_BOUNCE_COUNT, bounceCount + 1);
                 arrow.hasImpulse = true;
             }
@@ -1332,9 +1402,79 @@ public class ModEventHandler {
         if (entity.getPersistentData().getBoolean(PKEY_FIDDLE_EQUIPPED)) {
             stripNonFiddleAttackSpeed(entity);
         }
+
+        // ---- Empty Cage: absorb curses on equip ----
+        if (to.getItem() == ModItems.EMPTY_CAGE.get()) {
+            EmptyCage.tryAbsorbCurses(entity, to);
+        }
+
+        // ---- Snecko Eye: cleanup attack speed modifier on unequip ----
+        if (from.getItem() == ModItems.SNECKO_EYE.get()) {
+            SneckoEye.removeConfusedModifier(entity);
+        }
+
+        // ---- Runic Pyramid: clear tracking on unequip ----
+        if (from.getItem() == ModItems.RUNIC_PYRAMID.get() && entity instanceof Player player) {
+            RunicPyramid.onUnequip(player);
+        }
+
+        // ---- Sozu: clear all effects on unequip ----
+        if (from.getItem() == ModItems.SOZU.get()) {
+            Sozu.removeAllEffects(entity);
+        }
+
+        // ---- Velvet Choker: one-time scan on equip ----
+        if (to.getItem() == ModItems.VELVET_CHOKER.get() && entity instanceof Player player) {
+            VelvetChoker.syncExistingOwned(player);
+        }
+
+        // ---- Astrolabe: pick 3 new attributes on equip, remove on unequip ----
+        if (to.getItem() == ModItems.ASTROLABE.get() && entity instanceof Player player) {
+            Astrolabe.onEquip(player);
+        }
+        if (from.getItem() == ModItems.ASTROLABE.get() && entity instanceof Player player) {
+            Astrolabe.onUnequip(player);
+        }
+
+        // ---- Pandora's Box: randomize attributes with value == 6 on equip ----
+        if (to.getItem() == ModItems.PANDORAS_BOX.get() && entity instanceof Player player) {
+            PandorasBox.randomizeSixes(player);
+        }
     }
 
-    // === MobEffectEvent.Expired: combat → whisper, heaven door → restore AI ===
+    // === MobEffectEvent.Added: Sozu blocks all effects, Runic Pyramid doubles first beneficial buff ===
+
+    @SubscribeEvent
+    public static void onMobEffectAdded(MobEffectEvent.Added event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        // Sozu: block all potion effects
+        if (Sozu.isEquippedBy(player)) {
+            event.getEffectInstance(); // ensure instance exists
+            player.removeEffect(event.getEffectInstance().getEffect());
+            return;
+        }
+
+        var pyramid = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.RUNIC_PYRAMID.get()));
+        if (pyramid.isEmpty()) return;
+
+        MobEffectInstance instance = event.getEffectInstance();
+        if (instance == null) return;
+
+        int newDuration = RunicPyramid.onEffectAdded(player, instance.getEffect(), instance.getDuration());
+        if (newDuration != instance.getDuration()) {
+            // Replace the effect with doubled duration
+            MobEffectInstance newInstance = new MobEffectInstance(instance.getEffect(),
+                    newDuration, instance.getAmplifier(), instance.isAmbient(),
+                    instance.isVisible(), instance.showIcon());
+            player.removeEffect(instance.getEffect());
+            player.addEffect(newInstance);
+        }
+    }
+
+    // === MobEffectEvent.Expired: combat → whisper, heaven door → restore AI, Runic Pyramid tracking ===
 
     @SubscribeEvent
     public static void onMobEffectExpired(MobEffectEvent.Expired event) {
@@ -1358,6 +1498,50 @@ public class ModEventHandler {
             // Combat expired → apply Whisper (infinite)
             entity.addEffect(new MobEffectInstance(ModEffects.WHISPER.get(),
                     -1, 0, false, false, true));
+        }
+
+        // Runic Pyramid: clear tracking if tracked effect expired
+        if (entity instanceof Player player) {
+            if (event.getEffectInstance() != null) {
+                RunicPyramid.onEffectExpired(player, event.getEffectInstance().getEffect());
+            }
+        }
+    }
+
+    // === AnimalTameEvent: Velvet Choker — sync attributes to newly tamed entity ===
+
+    @SubscribeEvent
+    public static void onAnimalTame(AnimalTameEvent event) {
+        if (event.getTamer() == null) return;
+        LivingEntity tamer = event.getTamer();
+        if (!(tamer instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        if (!VelvetChoker.isEquippedBy(player)) return;
+
+        LivingEntity animal = event.getAnimal();
+        VelvetChoker.syncAttributesTo(player, animal);
+    }
+
+    // === EntityJoinLevelEvent: Velvet Choker — sync attributes to summoned entities ===
+
+    @SubscribeEvent
+    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        if (!(event.getEntity() instanceof LivingEntity living)) return;
+        if (living.level().isClientSide()) return;
+        if (living instanceof Player) return;
+
+        // Check all nearby players with Velvet Choker
+        var nearby = living.level().getEntitiesOfClass(
+                Player.class,
+                new AABB(living.blockPosition()).inflate(10.0),
+                p -> VelvetChoker.isEquippedBy(p));
+        if (nearby.isEmpty()) return;
+
+        for (Player player : nearby) {
+            if (VelvetChoker.isOwnedBy(living, player.getUUID())) {
+                VelvetChoker.syncAttributesTo(player, living);
+                break;
+            }
         }
     }
 
@@ -1766,28 +1950,6 @@ public class ModEventHandler {
             player.getPersistentData().putFloat(PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION, currentAbsorption);
         }
 
-        // ---- Lords Parasol: zero all villager trade costs when equipped ----
-        var lordsParasol = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
-                handler.findFirstCurio(stack -> stack.getItem() == ModItems.LORDS_PARASOL.get()));
-        if (lordsParasol.isPresent() && player.containerMenu instanceof MerchantMenu) {
-            try {
-                MerchantMenu mm = (MerchantMenu) player.containerMenu;
-                Field traderField = MerchantMenu.class.getDeclaredField("trader");
-                traderField.setAccessible(true);
-                var trader = (net.minecraft.world.item.trading.Merchant) traderField.get(mm);
-
-                Field costAField = MerchantOffer.class.getDeclaredField("costA");
-                costAField.setAccessible(true);
-                Field costBField = MerchantOffer.class.getDeclaredField("costB");
-                costBField.setAccessible(true);
-                for (MerchantOffer offer : trader.getOffers()) {
-                    costAField.set(offer, ItemStack.EMPTY);
-                    costBField.set(offer, ItemStack.EMPTY);
-                }
-            } catch (ReflectiveOperationException ignored) {
-            }
-        }
-
         // ---- Lords Parasol: offhand grants slow falling ----
         if (player.getOffhandItem().getItem() == ModItems.LORDS_PARASOL.get()) {
             if (!player.hasEffect(MobEffects.SLOW_FALLING) || player.getEffect(MobEffects.SLOW_FALLING).getDuration() < 100) {
@@ -1872,6 +2034,46 @@ public class ModEventHandler {
                 }
             }
         }
+
+        // ---- Ectoplasm: consume emeralds from inventory for XP ----
+        var ectoplasmTick = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.ECTOPLASM.get()));
+        if (ectoplasmTick.isPresent()) {
+            long now = player.level().getGameTime();
+            if (now % 20 == 0) { // every 1 second
+                Ectoplasm.consumeEmeralds(player);
+            }
+        }
+
+        // ---- Lords Parasol: spawn trade results every time the player opens a trade panel ----
+        var lordParasol = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.LORDS_PARASOL.get()));
+        if (lordParasol.isPresent()) {
+            boolean inTrade = player.containerMenu instanceof MerchantMenu;
+            boolean wasInTrade = player.getPersistentData().getBoolean(PKEY_PARASOL_LAST_MENU);
+            player.getPersistentData().putBoolean(PKEY_PARASOL_LAST_MENU, inTrade);
+
+            // Just entered: transition from non-trade to trade menu
+            if (inTrade && !wasInTrade) {
+                try {
+                    java.lang.reflect.Field traderField = MerchantMenu.class.getDeclaredField("trader");
+                    traderField.setAccessible(true);
+                    var trader = (net.minecraft.world.item.trading.Merchant) traderField.get((MerchantMenu) player.containerMenu);
+                    net.minecraft.world.level.Level level = player.level();
+                    double x = player.getX();
+                    double y = player.getY();
+                    double z = player.getZ();
+                    for (MerchantOffer offer : trader.getOffers()) {
+                        ItemStack result = offer.getResult().copy();
+                        if (result.isEmpty()) continue;
+                        level.addFreshEntity(new ItemEntity(level, x, y, z, result));
+                    }
+                } catch (ReflectiveOperationException ignored) {
+                }
+            }
+        } else {
+            player.getPersistentData().remove(PKEY_PARASOL_LAST_MENU);
+        }
     }
 
     // === Attribute modifier helpers ===
@@ -1912,6 +2114,14 @@ public class ModEventHandler {
         if (attr != null) {
             attr.removeModifier(uuid);
             attr.addTransientModifier(new AttributeModifier(uuid, "AttackSpeedModifier", amount, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    private static void applyAttackDamageModifier(LivingEntity entity, UUID uuid, double amount) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(uuid);
+            attr.addTransientModifier(new AttributeModifier(uuid, "AttackDamageModifier", amount, AttributeModifier.Operation.ADDITION));
         }
     }
 

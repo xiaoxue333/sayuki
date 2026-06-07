@@ -17,6 +17,10 @@ public class ModRecipes {
             RECIPES.register("crafting_choices_paradox",
                     () -> new SimpleCraftingRecipeSerializer<>(ChoiceParadoxRecipe::new));
 
+    public static final RegistryObject<RecipeSerializer<PhilosophersStoneRecipe>> PHILOSOPHERS_STONE =
+            RECIPES.register("crafting_philosophers_stone",
+                    () -> new SimpleCraftingRecipeSerializer<>(PhilosophersStoneRecipe::new));
+
     public static void register(IEventBus eventBus) {
         RECIPES.register(eventBus);
     }

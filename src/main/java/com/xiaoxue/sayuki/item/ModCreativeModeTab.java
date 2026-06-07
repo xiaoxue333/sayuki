@@ -132,6 +132,17 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.SNECKO_EYE.get());
                         pOutput.accept(ModItems.SOZU.get());
                         pOutput.accept(ModItems.VELVET_CHOKER.get());
+                        // New relics
+                        pOutput.accept(ModItems.CLAWS.get());
+                        pOutput.accept(ModItems.CROSSBOW.get());
+                        pOutput.accept(ModItems.IRON_CLUB.get());
+                        pOutput.accept(ModItems.MEAT_CLEAVER.get());
+                        pOutput.accept(ModItems.SAI.get());
+                        pOutput.accept(ModItems.SPIKED_GAUNTLETS.get());
+                        pOutput.accept(ModItems.TANXS_WHISTLE.get());
+                        pOutput.accept(ModItems.THROWING_AXE.get());
+                        pOutput.accept(ModItems.TRI_BOOMERANG.get());
+                        pOutput.accept(ModItems.WAR_HAMMER.get());
                     }).build());
 
     public static void register(IEventBus eventBus) {

@@ -39,6 +39,9 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> POISON_POWER =
             EFFECTS.register("poison_power", PoisonPowerEffect::new);
 
+    public static final RegistryObject<MobEffect> CONFUSED_POWER =
+            EFFECTS.register("confused_power", ConfusedPowerEffect::new);
+
     public static void register(IEventBus eventBus) {
         EFFECTS.register(eventBus);
     }

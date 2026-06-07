@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "sayuki:dusty_tome" },
-    { "item": "sayuki:ring_of_the_snake" }
-  ],
-  "result": { "item": "sayuki:ring_of_the_drake", "count": 1 }
-}

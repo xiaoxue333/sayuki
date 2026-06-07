@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "sayuki:dusty_tome" },
-    { "item": "sayuki:divine_right" }
-  ],
-  "result": { "item": "sayuki:divine_destiny", "count": 1 }
-}

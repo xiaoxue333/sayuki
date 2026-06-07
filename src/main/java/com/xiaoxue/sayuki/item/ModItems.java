@@ -226,7 +226,7 @@ public class ModItems {
     public static final RegistryObject<Item> PANDORAS_BOX =
             ITEMS.register("pandoras_box", () -> new PandorasBox(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> PHILOSOPHERS_STONE =
-            ITEMS.register("philosophers_stone", () -> new PhilosophersStone(new Item.Properties().stacksTo(1)));
+            ITEMS.register("philosophers_stone", () -> new PhilosophersStone(new Item.Properties().durability(666)));
     public static final RegistryObject<Item> RUNIC_PYRAMID =
             ITEMS.register("runic_pyramid", () -> new RunicPyramid(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> SNECKO_EYE =
@@ -235,6 +235,28 @@ public class ModItems {
             ITEMS.register("sozu", () -> new Sozu(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> VELVET_CHOKER =
             ITEMS.register("velvet_choker", () -> new VelvetChoker(new Item.Properties().stacksTo(1)));
+
+    // ===== New relics (batch import) =====
+    public static final RegistryObject<Item> CLAWS =
+            ITEMS.register("claws", () -> new Claws(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> CROSSBOW =
+            ITEMS.register("crossbow", () -> new CrossbowRelic(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> IRON_CLUB =
+            ITEMS.register("iron_club", () -> new IronClub(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> MEAT_CLEAVER =
+            ITEMS.register("meat_cleaver", () -> new MeatCleaver(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> SAI =
+            ITEMS.register("sai", () -> new Sai(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> SPIKED_GAUNTLETS =
+            ITEMS.register("spiked_gauntlets", () -> new SpikedGauntlets(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> TANXS_WHISTLE =
+            ITEMS.register("tanxs_whistle", () -> new TanxsWhistle(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> THROWING_AXE =
+            ITEMS.register("throwing_axe", () -> new ThrowingAxe(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> TRI_BOOMERANG =
+            ITEMS.register("tri_boomerang", () -> new TriBoomerang(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> WAR_HAMMER =
+            ITEMS.register("war_hammer", () -> new WarHammer(new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus eventBus){
         ITEMS.register(eventBus);

@@ -17,6 +17,15 @@ base {
 // Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+// Suppress javac deprecation notes triggered by Forge/Mojang classpath
+afterEvaluate {
+    tasks.named('compileJava', JavaCompile).configure {
+        doFirst {
+            options.compilerArgs.add('-nowarn')
+        }
+    }
+}
+
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
     // The mappings can be changed at any time and must be in the following format.

@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": { "item": "sayuki:dusty_tome" },
+  "base": { "item": "minecraft:diamond_pickaxe" },
+  "addition": { "item": "minecraft:netherite_ingot" },
+  "result": { "item": "minecraft:netherite_pickaxe" }
+}

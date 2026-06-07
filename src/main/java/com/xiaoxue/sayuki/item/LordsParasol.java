@@ -19,6 +19,5 @@ public class LordsParasol extends Item implements ICurioItem {
                                 List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.lords_parasol.1"));
-        tooltip.add(Component.translatable("tooltip.sayuki.lords_parasol.2"));
     }
 }

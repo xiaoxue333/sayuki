@@ -209,6 +209,11 @@ public class Config
             .comment("Preserved Fog: attack speed reduction when equipped, Default: -0.1")
             .defineInRange("preservedFogAttackSpeed", -0.1D, -Double.MAX_VALUE, Double.MAX_VALUE);
 
+    // ===== DARV: Ectoplasm =====
+    private static final ForgeConfigSpec.BooleanValue ECTOPLASM_SOPHISTICATED_BACKPACKS = BUILDER
+            .comment("Ectoplasm: whether to also scan Sophisticated Backpacks for emeralds, Default: true")
+            .define("ectoplasmSophisticatedBackpacks", true);
+
     // ===== Silent: Ninja Scroll (hardcoded +3 slots, no config) =====
     public static final int NINJA_SCROLL_SLOT_BONUS = 3;
 
@@ -252,6 +257,7 @@ public class Config
     public static int jeweledMaskDurationSeconds;
     public static int jeweledMaskCooldownSeconds;
     public static double preservedFogAttackSpeed;
+    public static boolean ectoplasmSophisticatedBackpacks;
 
     private static boolean validateItemName(final Object obj)
     {
@@ -302,5 +308,6 @@ public class Config
         jeweledMaskDurationSeconds = JEWELED_MASK_DURATION_SECONDS.get();
         jeweledMaskCooldownSeconds = JEWELED_MASK_COOLDOWN_SECONDS.get();
         preservedFogAttackSpeed = PRESERVED_FOG_ATTACK_SPEED.get();
+        ectoplasmSophisticatedBackpacks = ECTOPLASM_SOPHISTICATED_BACKPACKS.get();
     }
 }
