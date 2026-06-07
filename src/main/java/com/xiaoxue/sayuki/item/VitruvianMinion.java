@@ -23,8 +23,7 @@ public class VitruvianMinion extends Item implements ICurioItem {
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.vitruvian_minion.1",
-                String.format("%.1f", Config.vitruvianMinionDamageMultiplier)));
-        tooltip.add(Component.translatable("tooltip.sayuki.vitruvian_minion.2",
+                String.format("%.1f", Config.vitruvianMinionDamageMultiplier),
                 String.format("%.1f", Config.vitruvianMinionHealthMultiplier)));
     }
 }

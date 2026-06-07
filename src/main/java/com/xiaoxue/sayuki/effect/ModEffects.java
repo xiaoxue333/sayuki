@@ -36,6 +36,9 @@ public class ModEffects {
     public static final RegistryObject<MobEffect> DOOM_POWER =
             EFFECTS.register("doom_power", DoomPowerEffect::new);
 
+    public static final RegistryObject<MobEffect> POISON_POWER =
+            EFFECTS.register("poison_power", PoisonPowerEffect::new);
+
     public static void register(IEventBus eventBus) {
         EFFECTS.register(eventBus);
     }

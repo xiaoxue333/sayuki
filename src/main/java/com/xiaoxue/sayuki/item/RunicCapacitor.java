@@ -32,7 +32,7 @@ public class RunicCapacitor extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Runic Capacitor bonus",
-                    Config.runicCapacitorSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.RUNIC_CAPACITOR_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.addTransientSlotModifiers(modifiers));
         }
@@ -43,7 +43,7 @@ public class RunicCapacitor extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Runic Capacitor bonus",
-                    Config.runicCapacitorSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.RUNIC_CAPACITOR_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.removeSlotModifiers(modifiers));
         }
@@ -52,6 +52,6 @@ public class RunicCapacitor extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.runic_capacitor.1", Config.runicCapacitorSlotBonus));
+        tooltip.add(Component.translatable("tooltip.sayuki.runic_capacitor.1"));
     }
 }

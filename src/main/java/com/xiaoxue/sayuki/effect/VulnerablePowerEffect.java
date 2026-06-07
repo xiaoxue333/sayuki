@@ -1,5 +1,5 @@
 /**
- * Sayuki — Vulnerable Power Effect (target takes +25% damage from attacks)
+ * Sayuki — Vulnerable Power Effect (target takes +50% damage from attacks)
  */
 package com.xiaoxue.sayuki.effect;
 

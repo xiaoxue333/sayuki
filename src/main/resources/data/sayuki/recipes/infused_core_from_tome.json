@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "sayuki:dusty_tome" },
+    { "item": "sayuki:cracked_core" }
+  ],
+  "result": { "item": "sayuki:infused_core", "count": 1 }
+}

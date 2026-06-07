@@ -1,6 +1,3 @@
-/**
- * Sayuki — Orange Dough (遗物/Curios relic, +2 relic slots when equipped)
- */
 package com.xiaoxue.sayuki.item;
 
 import com.google.common.collect.HashMultimap;
@@ -32,7 +29,7 @@ public class OrangeDough extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Orange Dough bonus",
-                    Config.orangeDoughSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.ORANGE_DOUGH_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.addTransientSlotModifiers(modifiers));
         }
@@ -43,7 +40,7 @@ public class OrangeDough extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Orange Dough bonus",
-                    Config.orangeDoughSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.ORANGE_DOUGH_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.removeSlotModifiers(modifiers));
         }
@@ -52,6 +49,6 @@ public class OrangeDough extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.orange_dough.1", Config.orangeDoughSlotBonus));
+        tooltip.add(Component.translatable("tooltip.sayuki.orange_dough.1"));
     }
 }

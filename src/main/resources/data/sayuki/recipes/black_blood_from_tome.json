@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "sayuki:dusty_tome" },
+    { "item": "sayuki:burning_blood" }
+  ],
+  "result": { "item": "sayuki:black_blood", "count": 1 }
+}

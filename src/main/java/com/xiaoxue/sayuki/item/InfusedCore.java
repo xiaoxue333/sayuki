@@ -1,5 +1,5 @@
 /**
- * Sayuki — Infused Core (Curios relic slot item, lightning immunity, damage-to-lightning conversion, area lightning)
+ * Sayuki — Infused Core (Curios relic slot item, lightning immunity, area lightning)
  */
 package com.xiaoxue.sayuki.item;
 
@@ -33,6 +33,5 @@ public class InfusedCore extends Item implements ICurioItem {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.infused_core.1"));
         tooltip.add(Component.translatable("tooltip.sayuki.infused_core.2"));
-        tooltip.add(Component.translatable("tooltip.sayuki.infused_core.3"));
     }
 }

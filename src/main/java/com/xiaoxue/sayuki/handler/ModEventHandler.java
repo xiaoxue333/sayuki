@@ -15,13 +15,18 @@ import com.xiaoxue.sayuki.item.FrustaDominate;
 import com.xiaoxue.sayuki.item.MagentaSpearItem;
 import com.xiaoxue.sayuki.item.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.CombatRules;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LightningBolt;
@@ -33,19 +38,29 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.RecordItem;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
-import net.minecraftforge.event.entity.living.LivingHealEvent;
+import net.minecraftforge.event.entity.ProjectileImpactEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.TickEvent;
@@ -55,6 +70,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.event.CurioChangeEvent;
 
+import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = com.xiaoxue.sayuki.Sayuki.MOD_ID)
@@ -67,13 +84,21 @@ public class ModEventHandler {
     private static final UUID WHISPERING_EARRING_ATTACK_UUID = UUID.fromString("e5f6a7b8-c9d0-1234-efab-cdef12345678");
     private static final UUID DIVINE_RIGHT_MAX_MANA_UUID = UUID.fromString("b9c0d1e2-f3a4-5678-bcde-f123456789ab");
     private static final UUID DIVINE_DESTINY_MAX_MANA_UUID = UUID.fromString("c0d1e2f3-a4b5-6789-cdef-123456789abc");
-    private static final UUID DATA_DISK_LIGHTNING_POWER_UUID = UUID.fromString("d1e2f3a4-b5c6-7890-defa-bcdef1234567");
-    private static final UUID SYMBIOTIC_VIRUS_ELDRITCH_POWER_UUID = UUID.fromString("e2f3a4b5-c6d7-8901-efab-cdef12345678");
+    private static final UUID DATA_DISK_ALL_SPELL_POWER_UUID = UUID.fromString("d1e2f3a4-b5c6-7890-defa-bcdef1234567");
     private static final UUID POWER_CELL_MAX_MANA_UUID = UUID.fromString("f3a4b5c6-d7e8-9012-fabc-def123456789");
     private static final UUID FUNERARY_MASK_ATTACK_SPEED_UUID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
     private static final UUID DIVINE_RIGHT_FORGED_SWORD_AS_UUID = UUID.fromString("d5e6f7a8-b9c0-1234-defa-bcdef1234568");
     private static final UUID DIVINE_DESTINY_FORGED_SWORD_AS_UUID = UUID.fromString("e6f7a8b9-c0d1-2345-efab-cdef12345679");
     private static final UUID MINI_REGENT_ATTACK_UUID = UUID.fromString("b4c5d6e7-f8a9-0123-abcd-ef1234567890");
+    private static final UUID RED_SKULL_ATTACK_UUID = UUID.fromString("c5d6e7f8-a9b0-1234-bcde-f12345678901");
+    private static final UUID DISTINGUISHED_CAPE_MAX_HEALTH_UUID = UUID.fromString("f9a0b1c2-d3e4-5678-fabc-def123456790");
+    private static final UUID FIDDLE_ATTACK_SPEED_UUID = UUID.fromString("a0b1c2d3-e4f5-6789-abcd-ef1234567891");
+    private static final UUID BLOOD_SOAKED_ROSE_ATTACK_SPEED_UUID = UUID.fromString("b1c2d3e4-f5a6-7890-bcde-f12345678902");
+    private static final UUID BLOOD_SOAKED_ROSE_ATTACK_UUID = UUID.fromString("c2d3e4f5-a6b7-8901-cdef-123456789023");
+    private static final UUID PRESERVED_FOG_ATTACK_SPEED_UUID = UUID.fromString("d3e4f5a6-b7c8-9012-defa-bcdef1234567");
+    private static final UUID RUINED_HELMET_UUID = UUID.fromString("d6e7f8a9-b0c1-2345-cdef-123456789012");
+    private static final UUID BRIMSTONE_ATTACK_UUID = UUID.fromString("e7f8a9b0-c1d2-3456-defa-bcdef1234567");
+    private static final UUID BRIMSTONE_TARGET_TAG = UUID.fromString("f8a9b0c1-d2e3-4567-efab-cdef12345678");
     private static final int ABILITY_XP_COST = 7;
 
     private static final String PKEY_WHISPERING_EQUIPPED = "SayukiWearWhispering";
@@ -86,11 +111,13 @@ public class ModEventHandler {
     private static final String PKEY_BLACK_BLOOD_EMPOWERED = "SayukiBlackBloodEmpowered";
     private static final String PKEY_BOUNCE_COUNT = "sayukiBounceCount";
     private static final String PKEY_CRACKED_CORE_COOLDOWN = "SayukiCrackedCoreCooldown";
+    private static final String PKEY_SYMBIOTIC_VIRUS_COOLDOWN = "SayukiSymbioticVirusCooldown";
     private static final String PKEY_METRONOME_COUNTER = "SayukiMetronomeCounter";
     private static final String PKEY_METRONOME_COOLDOWN = "SayukiMetronomeCooldown";
     private static final String PKEY_BONE_FLUTE_HP_ACCUM = "SayukiBoneFluteHp";
     private static final String PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM = "SayukiBookRepairKnifeHeal";
     private static final String PKEY_BOOK_REPAIR_KNIFE_CHARGES = "SayukiBookRepairKnifeCharges";
+    private static final String PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION = "SayukiBookRepairKnifeLastAbsorption";
     private static final String PKEY_FUNERARY_MASK_LAST_TARGET = "SayukiFuneraryMaskLastTarget";
     private static final String PKEY_FUNERARY_MASK_LAST_HIT_TIME = "SayukiFuneraryMaskLastHitTime";
     private static final String PKEY_BOOKMARK_CHARGES = "SayukiBookmarkCharges";
@@ -103,6 +130,20 @@ public class ModEventHandler {
     private static final String PKEY_GALACTIC_DUST_REMAINDER = "SayukiGalacticDustRemainder";
     private static final String PKEY_GALACTIC_DUST_LAST_MANA = "SayukiGalacticDustLastMana";
     private static final String PKEY_GALACTIC_DUST_EQUIPPED = "SayukiGalacticDustEquipped";
+    private static final String PKEY_GALACTIC_DUST_BLOCK = "SayukiGalacticDustBlock";
+    private static final String PKEY_HELICAL_DART_EQUIPPED = "SayukiHelicalDartEquipped";
+    private static final String PKEY_HELICAL_DART_BOUNCES = "SayukiHelicalDartBounces";
+    private static final String PKEY_HELICAL_DART_BUFF_END = "SayukiHelicalDartBuffEnd";
+    private static final String PKEY_SELF_FORMING_CLAY_COOLDOWN = "SayukiSelfFormingClayCooldown";
+    private static final String PKEY_CHARONS_ASHES_STACKS = "SayukiCharonsAshesStacks";
+    private static final String PKEY_CHARONS_ASHES_LAST_ITEM = "SayukiCharonsAshesLastItem";
+    private static final String PKEY_CHARONS_ASHES_LAST_COUNT = "SayukiCharonsAshesLastCount";
+    private static final String PKEY_DEMON_TONGUE_COOLDOWN = "SayukiDemonTongueCooldown";
+    private static final String PKEY_BRIMSTONE_STACKS = "SayukiBrimstoneStacks";
+    private static final String PKEY_BRIMSTONE_LAST_STACK = "SayukiBrimstoneLastStack";
+    private static final String PKEY_BRIMSTONE_LAST_ATTACK = "SayukiBrimstoneLastAttack";
+    private static final String PKEY_BRIMSTONE_TARGET_ATK = "SayukiBrimstoneTargetAtk";
+    private static final String PKEY_BRIMSTONE_TARGET_ATTACKS = "SayukiBrimstoneTargetAttacks";
     private static final String PKEY_LUNAR_PASTRY_EQUIPPED = "SayukiLunarPastryEquipped";
     private static final String PKEY_LUNAR_PASTRY_LAST_MANA = "SayukiLunarPastryLastMana";
     private static final String PKEY_MINI_REGENT_EQUIPPED = "SayukiMiniRegentEquipped";
@@ -112,6 +153,37 @@ public class ModEventHandler {
     private static final String PKEY_MINI_REGENT_LAST_ATTACK = "SayukiMiniRegentLastAttack";
     private static final String PKEY_VITRUVIAN_MINION_EQUIPPED = "SayukiVitruvianMinionEquipped";
     private static final String PKEY_VITRUVIAN_BUFFED = "SayukiVitruvianBuffed";
+
+    // Music Box: disc playback & double-hit
+    private static final String PKEY_MUSIC_BOX_PLAYING = "SayukiMusicBoxPlaying";
+    private static final String PKEY_MUSIC_BOX_TRIGGER_TICK = "SayukiMusicBoxTriggerTick";
+    private static final String PKEY_MUSIC_BOX_CHARGE = "SayukiMusicBoxCharge";
+    private static final String PKEY_MUSIC_BOX_DOUBLE_HIT = "SayukiMusicBoxDoubleHit";
+
+    // Distinguished Cape: damage cap charges
+    private static final String PKEY_DISTINGUISHED_CAPE_CHARGES = "SayukiDistinguishedCapeCharges";
+    private static final String PKEY_DISTINGUISHED_CAPE_COOLDOWN = "SayukiDistinguishedCapeCooldown";
+
+    // Fiddle: attack speed override
+    private static final String PKEY_FIDDLE_EQUIPPED = "SayukiFiddleEquipped";
+
+    // Blood-Soaked Rose: weapon damage sync (same logic as Whispering Earring)
+    private static final String PKEY_BLOOD_SOAKED_ROSE_EQUIPPED = "SayukiBloodSoakedRoseEquipped";
+    private static final String PKEY_BLOOD_SOAKED_ROSE_WEAPON_DMG = "SayukiBloodSoakedRoseWeaponDmg";
+
+    // Jeweled Mask: random buff cycle
+    private static final String PKEY_JEWELED_MASK_ACTIVE = "SayukiJeweledMaskActive";
+    private static final String PKEY_JEWELED_MASK_NEXT_TRIGGER = "SayukiJeweledMaskNextTrigger";
+    private static final String PKEY_JEWELED_MASK_CURRENT_EFFECT = "SayukiJeweledMaskCurrentEffect";
+
+    // Sere Talon: permanent random debuffs + buffs
+    private static final String PKEY_SERE_TALON_EQUIPPED = "SayukiSereTalonEquipped";
+    private static final String PKEY_SERE_TALON_EFFECTS = "SayukiSereTalonEffects";
+    private static final int SERE_TALON_NEGATIVE_COUNT = 2;
+    private static final int SERE_TALON_POSITIVE_COUNT = 3;
+
+    // Preserved Fog: relic slot bonus (hardcoded +3)
+    public static final int PRESERVED_FOG_SLOT_BONUS = 3;
 
     /** Guard flag to prevent recursive lightning damage from core items. */
     private static boolean applyingCoreLightning = false;
@@ -157,6 +229,36 @@ public class ModEventHandler {
             MagentaSpearItem.performRapidThrust(player.level(), player);
             player.getCooldowns().addCooldown(stack.getItem(), Config.magentaSpearCooldownTicks);
             return;
+        }
+    }
+
+    // === LivingEquipmentChange: Fiddle strips non-fiddle AS modifiers ===
+
+    @SubscribeEvent
+    public static void onLivingEquipmentChange(LivingEquipmentChangeEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.level().isClientSide()) return;
+        if (entity.getPersistentData().getBoolean(PKEY_FIDDLE_EQUIPPED)) {
+            stripNonFiddleAttackSpeed(entity);
+        }
+    }
+
+    // === LivingHurt: Distinguished Cape — cap damage to ≤1 when charges active ===
+
+    @SubscribeEvent
+    public static void onLivingHurtDistinguishedCape(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        // Check cape equipped
+        var cape = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DISTINGUISHED_CAPE.get()));
+        if (cape.isEmpty()) return;
+
+        int charges = player.getPersistentData().getInt(PKEY_DISTINGUISHED_CAPE_CHARGES);
+        if (charges > 0 && event.getAmount() > 1.0F) {
+            event.setAmount(1.0F);
+            player.getPersistentData().putInt(PKEY_DISTINGUISHED_CAPE_CHARGES, charges - 1);
         }
     }
 
@@ -247,32 +349,6 @@ public class ModEventHandler {
         player.getPersistentData().putInt(PKEY_BOOKMARK_CHARGES, bookmarkCharges);
     }
 
-    // === LivingHeal: Book Repair Knife — accumulate healing into Doom charges ===
-
-    @SubscribeEvent
-    public static void onLivingHealBookRepairKnife(LivingHealEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
-        if (player.level().isClientSide()) return;
-
-        var knife = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
-                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BOOK_REPAIR_KNIFE.get()));
-        if (knife.isEmpty()) return;
-
-        double healAmount = event.getAmount();
-        double accum = player.getPersistentData().getDouble(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM);
-        int charges = player.getPersistentData().getInt(PKEY_BOOK_REPAIR_KNIFE_CHARGES);
-        double threshold = Config.bookRepairKnifeHealPerCharge;
-
-        accum += healAmount;
-        while (accum >= threshold) {
-            accum -= threshold;
-            charges++;
-        }
-
-        player.getPersistentData().putDouble(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM, accum);
-        player.getPersistentData().putInt(PKEY_BOOK_REPAIR_KNIFE_CHARGES, charges);
-    }
-
     // === AttackEntity: Fencing Manual — forge/upgrade sword on melee hit ===
 
     @SubscribeEvent
@@ -352,23 +428,9 @@ public class ModEventHandler {
         ItemStack weapon = player.getMainHandItem();
         if (weapon.getItem() == ModItems.AZURE_SWORD.get()) {
             LivingEntity target = event.getEntity();
-            boolean shouldDouble = target.getPersistentData().getBoolean(AzureSword.MARK_DOUBLE_DAMAGE);
-            if (shouldDouble) {
+            if (target.getPersistentData().getBoolean(AzureSword.MARK_DOUBLE_DAMAGE)) {
                 target.getPersistentData().remove(AzureSword.MARK_DOUBLE_DAMAGE);
-
-                float armor = target.getArmorValue();
-                float toughness = (float) target.getAttributeValue(Attributes.ARMOR_TOUGHNESS);
-                float postArmorDamage = event.getAmount();
-
-                if (postArmorDamage > 0) {
-                    float preArmor = postArmorDamage;
-                    for (int i = 0; i < 8; i++) {
-                        float result = CombatRules.getDamageAfterAbsorb(preArmor, armor, toughness);
-                        if (result <= 0 || Math.abs(result - postArmorDamage) / postArmorDamage < 0.001f) break;
-                        preArmor += (postArmorDamage - result);
-                    }
-                    event.setAmount(Math.max(preArmor, postArmorDamage) * 2.0F);
-                }
+                event.setAmount(event.getAmount() * 2.0F);
             }
         }
 
@@ -378,9 +440,24 @@ public class ModEventHandler {
             handleWhisperingBuffs(event, player);
         }
 
-        // Vulnerable Power: targets with the effect take +25% damage
+        // Blood-Soaked Rose: sync weapon damage modifier
+        if (player.getPersistentData().getBoolean(PKEY_BLOOD_SOAKED_ROSE_EQUIPPED)) {
+            syncBloodSoakedRoseWeaponModifier(player);
+        }
+
+        // Vulnerable Power: targets with the effect take +50% damage
+        // Paper Phrog: +25% bonus against Vulnerable targets (total 1.75x)
+        float vulnMult = 1.0F;
         if (event.getEntity().hasEffect(ModEffects.VULNERABLE_POWER.get())) {
-            event.setAmount(event.getAmount() * 1.25F);
+            vulnMult = 1.5F;
+            var phrog = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                    handler.findFirstCurio(stack -> stack.getItem() == ModItems.PAPER_PHROG.get()));
+            if (phrog.isPresent()) {
+                vulnMult = 1.75F;
+            }
+        }
+        if (vulnMult > 1.0F) {
+            event.setAmount(event.getAmount() * vulnMult);
         }
 
         // Black Blood empowered: next attack applies Vulnerable Power (duration stacking)
@@ -393,14 +470,45 @@ public class ModEventHandler {
                     false, false, true));
         }
 
+        // ---- Charon's Ashes: consume stacks as bonus damage ----
+        int ashesStacks = player.getPersistentData().getInt(PKEY_CHARONS_ASHES_STACKS);
+        if (ashesStacks > 0) {
+            var ashes = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                    handler.findFirstCurio(stack -> stack.getItem() == ModItems.CHARONS_ASHES.get()));
+            if (ashes.isPresent()) {
+                event.setAmount(event.getAmount() + (float) (ashesStacks * Config.CHARONS_ASHES_DAMAGE_PER_STACK));
+                player.getPersistentData().putInt(PKEY_CHARONS_ASHES_STACKS, 0);
+            }
+        }
+
+        // ---- Brimstone: on-attack ATK stacking + target ATK bonus ----
+        var brimstone = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BRIMSTONE.get()));
+        if (brimstone.isPresent()) {
+            long now = player.level().getGameTime();
+            long lastStack = player.getPersistentData().getLong(PKEY_BRIMSTONE_LAST_STACK);
+            if (now - lastStack >= Config.brimstoneCooldownTicks) {
+                player.getPersistentData().putLong(PKEY_BRIMSTONE_LAST_STACK, now);
+                int stacks = player.getPersistentData().getInt(PKEY_BRIMSTONE_STACKS) + 1;
+                player.getPersistentData().putInt(PKEY_BRIMSTONE_STACKS, stacks);
+                applyBrimstoneAttackModifier(player);
+                LivingEntity target = event.getEntity();
+                applyBrimstoneTargetAttackModifier(target);
+            }
+            player.getPersistentData().putLong(PKEY_BRIMSTONE_LAST_ATTACK, now);
+        }
+
         // ---- Bone Flute: absorption per melee hit ----
         var boneFlute = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.BONE_FLUTE.get()));
         if (boneFlute.isPresent()) {
-            double increment = Config.boneFluteHealthPerHit;
+            double increment = Config.BONE_FLUTE_HEALTH_PER_HIT;
             double current = player.getPersistentData().getDouble(PKEY_BONE_FLUTE_HP_ACCUM);
             player.getPersistentData().putDouble(PKEY_BONE_FLUTE_HP_ACCUM, current + increment);
             player.setAbsorptionAmount(player.getAbsorptionAmount() + (float) increment);
+            // Bone Flute: also gain +2 block per melee hit
+            int block = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK);
+            player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, block + (int) Config.BONE_FLUTE_BLOCK_PER_HIT);
         }
 
         // ---- Funerary Mask: same-target attack speed ----
@@ -421,7 +529,20 @@ public class ModEventHandler {
             player.getPersistentData().putLong(PKEY_FUNERARY_MASK_LAST_HIT_TIME, now);
         }
 
-        // ---- Projectile bounce: Ring of the Snake / Ring of the Drake ----
+        // ---- Symbiotic Virus: sonic boom on melee hit ----
+        var symbioticVirus = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SYMBIOTIC_VIRUS.get()));
+        if (symbioticVirus.isPresent()) {
+            long now = player.level().getGameTime();
+            long cooldownTicks = getCoreCooldownTicks(player);
+            if (now - player.getPersistentData().getLong(PKEY_SYMBIOTIC_VIRUS_COOLDOWN) >= cooldownTicks) {
+                player.getPersistentData().putLong(PKEY_SYMBIOTIC_VIRUS_COOLDOWN, now);
+                performVirusSonicBoom(event.getEntity(), player);
+            }
+        }
+
+        // ---- Projectile damage modifier: Ring of the Snake / Ring of the Drake ----
+        // Bouncing for AbstractArrow is handled in onProjectileImpact
         if (event.getSource().getDirectEntity() instanceof Projectile projectile) {
 
             boolean hasSnake = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
@@ -431,14 +552,11 @@ public class ModEventHandler {
 
             if (hasSnake || hasDrake) {
                 int bounceCount = projectile.getPersistentData().getInt(PKEY_BOUNCE_COUNT);
-                int maxBounces = hasDrake ? 6 : 2;
                 double retention = hasDrake ? 0.75 : 0.5;
 
-                // Apply damage reduction based on bounce count
                 double multiplier = Math.pow(retention, bounceCount);
                 event.setAmount((float) (event.getAmount() * multiplier));
 
-                // Drake: apply Weak Power (duration stacking)
                 if (hasDrake) {
                     LivingEntity target = event.getEntity();
                     var existing = target.getEffect(ModEffects.WEAK_POWER.get());
@@ -446,35 +564,287 @@ public class ModEventHandler {
                     target.addEffect(new MobEffectInstance(ModEffects.WEAK_POWER.get(), newDuration, 0,
                             false, false, true));
                 }
-
-                // Try to bounce to next target
-                if (bounceCount < maxBounces && !event.getEntity().level().isClientSide()) {
-                    LivingEntity currentTarget = event.getEntity();
-                    Vec3 hitPos = currentTarget.position();
-                    AABB searchBox = new AABB(hitPos.subtract(12, 12, 12), hitPos.add(12, 12, 12));
-
-                    LivingEntity nextTarget = currentTarget.level().getEntitiesOfClass(Mob.class, searchBox,
-                            mob -> mob instanceof Enemy && mob != currentTarget && mob.isAlive())
-                            .stream()
-                            .min((a, b) -> Double.compare(
-                                    a.distanceToSqr(currentTarget),
-                                    b.distanceToSqr(currentTarget)))
-                            .orElse(null);
-
-                    if (nextTarget != null) {
-                        Projectile newProj = (Projectile) projectile.getType().create(currentTarget.level());
-                        if (newProj != null) {
-                            newProj.setOwner(player);
-                            newProj.setPos(currentTarget.getEyePosition().add(0, -0.3, 0));
-                            Vec3 dir = nextTarget.getEyePosition().subtract(newProj.position()).normalize();
-                            newProj.setDeltaMovement(dir.scale(1.5));
-                            newProj.getPersistentData().putInt(PKEY_BOUNCE_COUNT, bounceCount + 1);
-                            currentTarget.level().addFreshEntity(newProj);
-                        }
-                    }
-                }
             }
         }
+
+        // ---- Music Box: consume charge → mark target for double-hit ----
+        if (player.getPersistentData().getBoolean(PKEY_MUSIC_BOX_CHARGE)) {
+            player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, false);
+            LivingEntity target = event.getEntity();
+            target.getPersistentData().putBoolean(PKEY_MUSIC_BOX_DOUBLE_HIT, true);
+            target.getPersistentData().putFloat("SayukiMusicBoxDmg", event.getAmount());
+            target.getPersistentData().putString("SayukiMusicBoxOwner", player.getStringUUID());
+        }
+    }
+
+    // === ProjectileImpact: Ring of the Snake / Ring of the Drake — redirect AbstractArrow ===
+
+    @SubscribeEvent
+    public static void onProjectileImpact(ProjectileImpactEvent event) {
+        if (!(event.getRayTraceResult() instanceof EntityHitResult ehr)) return;
+        if (!(ehr.getEntity() instanceof LivingEntity target)) return;
+        if (!(target instanceof Enemy)) return;
+
+        Projectile projectile = event.getProjectile();
+        if (!(projectile.getOwner() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        if (!(projectile instanceof AbstractArrow arrow)) return;
+
+        // Helical Dart: track projectile hits independently of rings
+        if (player.getPersistentData().getBoolean(PKEY_HELICAL_DART_EQUIPPED)) {
+            int hits = player.getPersistentData().getInt(PKEY_HELICAL_DART_BOUNCES) + 1;
+            if (hits >= 3) {
+                player.getPersistentData().putInt(PKEY_HELICAL_DART_BOUNCES, 0);
+                player.getPersistentData().putLong(PKEY_HELICAL_DART_BUFF_END,
+                        player.level().getGameTime() + Config.helicalDartBuffSeconds * 20L);
+            } else {
+                player.getPersistentData().putInt(PKEY_HELICAL_DART_BOUNCES, hits);
+            }
+        }
+
+        boolean hasSnake = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.RING_OF_THE_SNAKE.get())).isPresent();
+        boolean hasDrake = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.RING_OF_THE_DRAKE.get())).isPresent();
+        if (!hasSnake && !hasDrake) return;
+
+        int bounceCount = projectile.getPersistentData().getInt(PKEY_BOUNCE_COUNT);
+        int maxBounces = hasDrake ? 6 : 2;
+        double retention = hasDrake ? 0.75 : 0.5;
+
+        event.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+
+        float velocity = (float) arrow.getDeltaMovement().length();
+        int rawDamage = (int) Math.ceil(Math.max(Math.min((double) velocity * arrow.getBaseDamage(), 2.147483647E9D), 0.0D));
+        if (arrow.isCritArrow()) {
+            rawDamage += arrow.level().random.nextInt(rawDamage / 2 + 2);
+        }
+        double multiplier = Math.pow(retention, bounceCount);
+        float finalDamage = (float) (rawDamage * multiplier);
+
+        Entity owner = arrow.getOwner();
+        DamageSource source = arrow.level().damageSources().arrow(arrow, owner != null ? owner : arrow);
+
+        target.hurt(source, finalDamage);
+
+        if (hasDrake) {
+            var existing = target.getEffect(ModEffects.WEAK_POWER.get());
+            int newDuration = (existing != null) ? existing.getDuration() + 3 * 20 : 3 * 20;
+            target.addEffect(new MobEffectInstance(ModEffects.WEAK_POWER.get(), newDuration, 0,
+                    false, false, true));
+        }
+
+        if (bounceCount < maxBounces) {
+            Vec3 hitPos = target.position();
+            float searchRadius = (float) Config.ringSearchRadius;
+            AABB searchBox = new AABB(hitPos.subtract(searchRadius, searchRadius, searchRadius), 
+                    hitPos.add(searchRadius, searchRadius, searchRadius));
+
+            LivingEntity nextTarget = target.level().getEntitiesOfClass(Mob.class, searchBox,
+                    mob -> mob instanceof Enemy && mob != target && mob.isAlive())
+                    .stream()
+                    .min((a, b) -> Double.compare(
+                            a.distanceToSqr(target),
+                            b.distanceToSqr(target)))
+                    .orElse(null);
+
+            if (nextTarget != null) {
+                Vec3 startPos = target.getEyePosition().add(0, -0.3, 0);
+                arrow.setPos(startPos.x, startPos.y, startPos.z);
+                Vec3 dir = nextTarget.getEyePosition().subtract(arrow.position()).normalize();
+                arrow.setDeltaMovement(dir.scale(1.5));
+                arrow.getPersistentData().putInt(PKEY_BOUNCE_COUNT, bounceCount + 1);
+                arrow.hasImpulse = true;
+            }
+        }
+    }
+
+    // === LivingHurt: Galactic Dust — reduce damage by accumulated block ===
+
+    @SubscribeEvent
+    public static void onLivingHurtGalacticDust(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        int block = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK);
+        if (block <= 0) return;
+        float amount = event.getAmount();
+        if (amount <= block) {
+            player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, block - (int) Math.ceil(amount));
+            event.setCanceled(true);
+        } else {
+            player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, 0);
+            event.setAmount(amount - block);
+        }
+    }
+
+    // === LivingHurt: Paper Krane — -40% from WEAK_POWER attackers, -25% from vanilla Weakness ===
+
+    @SubscribeEvent
+    public static void onLivingHurtPaperKrane(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        LivingEntity attacker = event.getSource().getEntity() instanceof LivingEntity le ? le : null;
+        if (attacker == null) return;
+
+        boolean hasKrane = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.PAPER_KRANE.get())).isPresent();
+        if (!hasKrane) return;
+
+        if (attacker.hasEffect(ModEffects.WEAK_POWER.get())) {
+            event.setAmount(event.getAmount() * 0.6F);
+        } else if (attacker.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS)) {
+            event.setAmount(event.getAmount() * 0.75F);
+        }
+    }
+
+    // === LivingDamage: Self-Forming Clay — gain block when actually losing health ===
+
+    @SubscribeEvent
+    public static void onLivingDamageSelfFormingClay(LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        var clay = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SELF_FORMING_CLAY.get()));
+        if (clay.isEmpty()) return;
+        long now = player.level().getGameTime();
+        long lastTrigger = player.getPersistentData().getLong(PKEY_SELF_FORMING_CLAY_COOLDOWN);
+        if (now - lastTrigger < Config.selfFormingClayCooldownTicks) return;
+        player.getPersistentData().putLong(PKEY_SELF_FORMING_CLAY_COOLDOWN, now);
+        int current = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK);
+        player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, current + (int) Config.SELF_FORMING_CLAY_BLOCK_PER_HIT);
+    }
+
+    // === LivingDamage: Demon Tongue — heal back the damage amount ===
+
+    @SubscribeEvent
+    public static void onLivingDamageDemonTongue(LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        var tongue = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DEMON_TONGUE.get()));
+        if (tongue.isEmpty()) return;
+        long now = player.level().getGameTime();
+        long lastTrigger = player.getPersistentData().getLong(PKEY_DEMON_TONGUE_COOLDOWN);
+        if (now - lastTrigger < Config.demonTongueCooldownTicks) return;
+        player.getPersistentData().putLong(PKEY_DEMON_TONGUE_COOLDOWN, now);
+        player.heal(event.getAmount());
+    }
+
+    // === PlayerDestroyItem: Charon's Ashes — durability break / totem consumption ===
+
+    @SubscribeEvent
+    public static void onPlayerDestroyItemCharonsAshes(PlayerDestroyItemEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+        var ashes = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CHARONS_ASHES.get()));
+        if (ashes.isEmpty()) return;
+        int stacks = player.getPersistentData().getInt(PKEY_CHARONS_ASHES_STACKS);
+        player.getPersistentData().putInt(PKEY_CHARONS_ASHES_STACKS, stacks + 1);
+    }
+
+    // === LivingHurt: Brimstone target — count attacks, remove modifier after limit ===
+
+    @SubscribeEvent
+    public static void onLivingHurtBrimstoneTarget(LivingHurtEvent event) {
+        if (!(event.getSource().getEntity() instanceof LivingEntity attacker)) return;
+        if (attacker.level().isClientSide()) return;
+        if (attacker.getAttribute(Attributes.ATTACK_DAMAGE) == null) return;
+        if (attacker.getAttribute(Attributes.ATTACK_DAMAGE).getModifier(BRIMSTONE_TARGET_TAG) == null) return;
+        var data = attacker.getPersistentData();
+        int attacks = data.getInt(PKEY_BRIMSTONE_TARGET_ATTACKS) + 1;
+        if (attacks >= Config.BRIMSTONE_TARGET_MAX_ATTACKS) {
+            attacker.getAttribute(Attributes.ATTACK_DAMAGE).removeModifier(BRIMSTONE_TARGET_TAG);
+            data.remove(PKEY_BRIMSTONE_TARGET_ATK);
+            data.remove(PKEY_BRIMSTONE_TARGET_ATTACKS);
+        } else {
+            data.putInt(PKEY_BRIMSTONE_TARGET_ATTACKS, attacks);
+        }
+    }
+
+    // === LivingEntityUseItemEvent.Finish: Charon's Ashes — food/potion usage ===
+
+    @SubscribeEvent
+    public static void onItemUseFinishCharonsAshes(LivingEntityUseItemEvent.Finish event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+        var ashes = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CHARONS_ASHES.get()));
+        if (ashes.isEmpty()) return;
+        int stacks = player.getPersistentData().getInt(PKEY_CHARONS_ASHES_STACKS);
+        player.getPersistentData().putInt(PKEY_CHARONS_ASHES_STACKS, stacks + 1);
+    }
+
+    // === LivingHurt: Twisted Funnel — apply poison_power on projectile hit ===
+
+    @SubscribeEvent
+    public static void onLivingHurtTwistedFunnel(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Enemy)) return;
+        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile)) return;
+        if (!(projectile.getOwner() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var funnel = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.TWISTED_FUNNEL.get()));
+        if (funnel.isEmpty()) return;
+
+        boolean hasSnecko = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SNECKO_SKULL.get())).isPresent();
+
+        int stacksToAdd = hasSnecko ? 5 : 4;
+        LivingEntity target = event.getEntity();
+        int existingAmplifier = -1;
+        var existing = target.getEffect(ModEffects.POISON_POWER.get());
+        if (existing != null) {
+            existingAmplifier = existing.getAmplifier();
+        }
+
+        int totalLayers = (existingAmplifier >= 0 ? existingAmplifier + 1 : 0) + stacksToAdd;
+        int newAmplifier = totalLayers - 2;
+
+        target.hurt(target.damageSources().magic(), totalLayers);
+
+        if (newAmplifier >= 0) {
+            target.addEffect(new MobEffectInstance(ModEffects.POISON_POWER.get(), -1, newAmplifier,
+                    false, false, true));
+        } else {
+            target.removeEffect(ModEffects.POISON_POWER.get());
+        }
+    }
+
+    // === LivingHurt: Tingsha — +3 damage on projectile hit ===
+
+    @SubscribeEvent
+    public static void onLivingHurtTingsha(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Enemy)) return;
+        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile)) return;
+        if (!(projectile.getOwner() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        boolean hasTingsha = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.TINGSHA.get())).isPresent();
+        if (!hasTingsha) return;
+
+        event.setAmount(event.getAmount() + 3);
+    }
+
+    // === LivingHurt: Tough Bandages — +3 block on projectile hit ===
+
+    @SubscribeEvent
+    public static void onLivingHurtToughBandages(LivingHurtEvent event) {
+        if (!(event.getSource().getDirectEntity() instanceof Projectile projectile)) return;
+        if (!(projectile.getOwner() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        boolean hasToughBandages = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.TOUGH_BANDAGES.get())).isPresent();
+        if (!hasToughBandages) return;
+
+        int block = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK) + 3;
+        long now = player.level().getGameTime();
+        if (now < player.getPersistentData().getLong(PKEY_HELICAL_DART_BUFF_END)) {
+            block++;
+        }
+        player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, block);
     }
 
     // === LivingHurt: Cracked Core — summons lightning bolt on target (shared cooldown) ===
@@ -488,13 +858,33 @@ public class ModEventHandler {
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.CRACKED_CORE.get()));
         if (crackedCore.isEmpty()) return;
 
-        // Configurable cooldown (shared with Infused Core / Emotion Chip)
-        long cooldownTicks = Config.crackedCoreCooldownSeconds * 20L;
+        // Configurable cooldown (shared with Infused Core / Emotion Chip), reduced 20% by Power Cell
+        long cooldownTicks = getCoreCooldownTicks(player);
         long now = player.level().getGameTime();
         if (now - player.getPersistentData().getLong(PKEY_CRACKED_CORE_COOLDOWN) < cooldownTicks) return;
         player.getPersistentData().putLong(PKEY_CRACKED_CORE_COOLDOWN, now);
 
         summonLightningOnTarget(event.getEntity(), player);
+    }
+
+    // === LivingHurt: Infused Core — summons area lightning bolts around self (shared cooldown) ===
+
+    @SubscribeEvent
+    public static void onLivingHurtInfusedCore(LivingHurtEvent event) {
+        if (applyingCoreLightning) return;
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var infusedCore = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.INFUSED_CORE.get()));
+        if (infusedCore.isEmpty()) return;
+
+        long cooldownTicks = getCoreCooldownTicks(player);
+        long now = player.level().getGameTime();
+        if (now - player.getPersistentData().getLong(PKEY_CRACKED_CORE_COOLDOWN) < cooldownTicks) return;
+        player.getPersistentData().putLong(PKEY_CRACKED_CORE_COOLDOWN, now);
+
+        summonAreaLightningBolts(player, player);
     }
 
     // === LivingHurt: Emotion Chip — when hurt, triggers Cracked/Infused Core effect ===
@@ -508,6 +898,20 @@ public class ModEventHandler {
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.EMOTION_CHIP.get()));
         if (emotionChip.isEmpty()) return;
 
+        // Shared cooldown with Cracked/Infused Core, reduced 20% by Power Cell
+        long cooldownTicks = getCoreCooldownTicks(player);
+        long now = player.level().getGameTime();
+
+        // Symbiotic Virus + Emotion Chip: delayed sonic boom on attacker (independent of core)
+        var symbioticVirus = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SYMBIOTIC_VIRUS.get()));
+        if (symbioticVirus.isPresent() && event.getSource().getEntity() instanceof LivingEntity attacker) {
+            if (now - player.getPersistentData().getLong(PKEY_SYMBIOTIC_VIRUS_COOLDOWN) >= cooldownTicks) {
+                player.getPersistentData().putLong(PKEY_SYMBIOTIC_VIRUS_COOLDOWN, now);
+                performVirusSonicBoom(attacker, player);
+            }
+        }
+
         // Check which core is equipped (mutually exclusive, but check both)
         var crackedCore = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.CRACKED_CORE.get()));
@@ -516,9 +920,6 @@ public class ModEventHandler {
 
         if (crackedCore.isEmpty() && infusedCore.isEmpty()) return;
 
-        // Shared cooldown with Cracked/Infused Core
-        long cooldownTicks = Config.crackedCoreCooldownSeconds * 20L;
-        long now = player.level().getGameTime();
         if (now - player.getPersistentData().getLong(PKEY_CRACKED_CORE_COOLDOWN) < cooldownTicks) return;
         player.getPersistentData().putLong(PKEY_CRACKED_CORE_COOLDOWN, now);
 
@@ -533,12 +934,10 @@ public class ModEventHandler {
         }
     }
 
-    // === LivingAttackEvent: Infused Core — lightning immunity + damage conversion + area bolts ===
+    // === LivingAttackEvent: Infused Core — lightning immunity ===
 
     @SubscribeEvent
     public static void onLivingAttackInfusedCore(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
-        if (applyingCoreLightning) return;
-
         // Defense: wearer immune to lightning
         if (event.getEntity() instanceof Player player) {
             var handler = CuriosApi.getCuriosInventory(player).resolve();
@@ -547,42 +946,8 @@ public class ModEventHandler {
                         stack -> stack.getItem() == ModItems.INFUSED_CORE.get());
                 if (infused.isPresent() && event.getSource().is(DamageTypeTags.IS_LIGHTNING)) {
                     event.setCanceled(true);
-                    return;
                 }
             }
-        }
-
-        // Offense: attacker converts all damage to lightning + summons bolts
-        if (!(event.getSource().getEntity() instanceof Player attacker)) return;
-        if (attacker.level().isClientSide()) return;
-
-        var handler = CuriosApi.getCuriosInventory(attacker).resolve();
-        if (handler.isEmpty()) return;
-
-        var infused = handler.get().findFirstCurio(
-                stack -> stack.getItem() == ModItems.INFUSED_CORE.get());
-        if (infused.isEmpty()) return;
-
-        // If already lightning, let through (lightning is the final converted type)
-        if (event.getSource().is(DamageTypeTags.IS_LIGHTNING)) return;
-
-        float amount = event.getAmount();
-        LivingEntity target = event.getEntity();
-
-        // Cancel original damage
-        event.setCanceled(true);
-
-        // Apply as sourceless lightning
-        applyingCoreLightning = true;
-        target.hurt(target.level().damageSources().lightningBolt(), amount);
-        applyingCoreLightning = false;
-
-        // Summon area lightning bolts (shared cooldown with Cracked Core)
-        long cooldownTicks = Config.crackedCoreCooldownSeconds * 20L;
-        long now = attacker.level().getGameTime();
-        if (now - attacker.getPersistentData().getLong(PKEY_CRACKED_CORE_COOLDOWN) >= cooldownTicks) {
-            attacker.getPersistentData().putLong(PKEY_CRACKED_CORE_COOLDOWN, now);
-            summonAreaLightningBolts(attacker, attacker);
         }
     }
 
@@ -705,21 +1070,15 @@ public class ModEventHandler {
             }
         }
 
-        // ---- Data Disk: lightning spell power ----
+        // ---- Data Disk: all spell power +0.1 (incl. addons) ----
         if (from.getItem() == ModItems.DATA_DISK.get()) {
-            removeLightningSpellPowerModifier(entity, DATA_DISK_LIGHTNING_POWER_UUID);
+            IronSpellsCompat.removeAllSpellPowerBonus(entity, DATA_DISK_ALL_SPELL_POWER_UUID);
         }
         if (to.getItem() == ModItems.DATA_DISK.get() && IronSpellsCompat.isLoaded()) {
-            applyLightningSpellPowerModifier(entity, DATA_DISK_LIGHTNING_POWER_UUID, 1);
+            IronSpellsCompat.applyAllSpellPowerBonus(entity, DATA_DISK_ALL_SPELL_POWER_UUID);
         }
 
-        // ---- Symbiotic Virus: eldritch spell power ----
-        if (from.getItem() == ModItems.SYMBIOTIC_VIRUS.get()) {
-            removeEldritchSpellPowerModifier(entity, SYMBIOTIC_VIRUS_ELDRITCH_POWER_UUID);
-        }
-        if (to.getItem() == ModItems.SYMBIOTIC_VIRUS.get() && IronSpellsCompat.isLoaded()) {
-            applyEldritchSpellPowerModifier(entity, SYMBIOTIC_VIRUS_ELDRITCH_POWER_UUID, 1);
-        }
+        // ---- Symbiotic Virus: no more spell power (sonic boom in LivingHurt) ----
 
         // ---- Power Cell: %-based max mana ----
         if (from.getItem() == ModItems.POWER_CELL.get()) {
@@ -729,7 +1088,7 @@ public class ModEventHandler {
             float maxMana = IronSpellsCompat.getMaxMana(player);
             if (maxMana > 0) {
                 applyIronSpellsMaxManaModifier(entity, POWER_CELL_MAX_MANA_UUID,
-                        (int) (maxMana * Config.powerCellManaPercent));
+                        (int) (maxMana * Config.POWER_CELL_MANA_PERCENT));
             }
         }
 
@@ -741,14 +1100,16 @@ public class ModEventHandler {
             entity.getPersistentData().putDouble(PKEY_BONE_FLUTE_HP_ACCUM, 0);
         }
 
-        // ---- Book Repair Knife: heal accumulation / charges ----
+        // ---- Book Repair Knife: absorption gain tracking ----
         if (from.getItem() == ModItems.BOOK_REPAIR_KNIFE.get()) {
             entity.getPersistentData().remove(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM);
             entity.getPersistentData().remove(PKEY_BOOK_REPAIR_KNIFE_CHARGES);
+            entity.getPersistentData().remove(PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION);
         }
         if (to.getItem() == ModItems.BOOK_REPAIR_KNIFE.get()) {
             entity.getPersistentData().putDouble(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM, 0);
             entity.getPersistentData().putInt(PKEY_BOOK_REPAIR_KNIFE_CHARGES, 0);
+            entity.getPersistentData().putFloat(PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION, 0);
         }
 
         // ---- Funerary Mask: tracking data ----
@@ -787,11 +1148,29 @@ public class ModEventHandler {
             entity.getPersistentData().putBoolean(PKEY_GALACTIC_DUST_EQUIPPED, false);
             entity.getPersistentData().remove(PKEY_GALACTIC_DUST_REMAINDER);
             entity.getPersistentData().remove(PKEY_GALACTIC_DUST_LAST_MANA);
+            entity.getPersistentData().remove(PKEY_GALACTIC_DUST_BLOCK);
         }
         if (to.getItem() == ModItems.GALACTIC_DUST.get()) {
             entity.getPersistentData().putBoolean(PKEY_GALACTIC_DUST_EQUIPPED, true);
             entity.getPersistentData().putDouble(PKEY_GALACTIC_DUST_REMAINDER, 0);
             entity.getPersistentData().putFloat(PKEY_GALACTIC_DUST_LAST_MANA, -1);
+            entity.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, 0);
+        }
+
+        // ---- Red Skull: attack modifier cleanup ----
+        if (from.getItem() == ModItems.RED_SKULL.get()) {
+            removeRedSkullAttackModifier(entity);
+        }
+
+        // ---- Helical Dart: equip / bounce / buff ----
+        if (from.getItem() == ModItems.HELICAL_DART.get()) {
+            entity.getPersistentData().putBoolean(PKEY_HELICAL_DART_EQUIPPED, false);
+            entity.getPersistentData().remove(PKEY_HELICAL_DART_BOUNCES);
+            entity.getPersistentData().remove(PKEY_HELICAL_DART_BUFF_END);
+        }
+        if (to.getItem() == ModItems.HELICAL_DART.get()) {
+            entity.getPersistentData().putBoolean(PKEY_HELICAL_DART_EQUIPPED, true);
+            entity.getPersistentData().putInt(PKEY_HELICAL_DART_BOUNCES, 0);
         }
 
         // ---- Lunar Pastry: equip state ----
@@ -802,6 +1181,96 @@ public class ModEventHandler {
         if (to.getItem() == ModItems.LUNAR_PASTRY.get()) {
             entity.getPersistentData().putBoolean(PKEY_LUNAR_PASTRY_EQUIPPED, true);
             entity.getPersistentData().putFloat(PKEY_LUNAR_PASTRY_LAST_MANA, -1);
+        }
+
+        // ---- Music Box: playback state / charge ----
+        if (from.getItem() == ModItems.MUSIC_BOX.get()) {
+            entity.getPersistentData().remove(PKEY_MUSIC_BOX_PLAYING);
+            entity.getPersistentData().remove(PKEY_MUSIC_BOX_TRIGGER_TICK);
+            entity.getPersistentData().remove(PKEY_MUSIC_BOX_CHARGE);
+        }
+        if (to.getItem() == ModItems.MUSIC_BOX.get()) {
+            entity.getPersistentData().putBoolean(PKEY_MUSIC_BOX_PLAYING, false);
+            entity.getPersistentData().putLong(PKEY_MUSIC_BOX_TRIGGER_TICK, 0);
+            entity.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, false);
+        }
+
+        // ---- Distinguished Cape: -9 max health attribute + damage cap charges ----
+        if (from.getItem() == ModItems.DISTINGUISHED_CAPE.get()) {
+            removeMaxHealthModifier(entity, DISTINGUISHED_CAPE_MAX_HEALTH_UUID);
+            entity.getPersistentData().remove(PKEY_DISTINGUISHED_CAPE_CHARGES);
+            entity.getPersistentData().remove(PKEY_DISTINGUISHED_CAPE_COOLDOWN);
+        }
+        if (to.getItem() == ModItems.DISTINGUISHED_CAPE.get()) {
+            applyMaxHealthModifier(entity, DISTINGUISHED_CAPE_MAX_HEALTH_UUID, -9.0);
+            entity.getPersistentData().putInt(PKEY_DISTINGUISHED_CAPE_CHARGES, 0);
+            entity.getPersistentData().putLong(PKEY_DISTINGUISHED_CAPE_COOLDOWN, 0);
+        }
+
+        // ---- Fiddle: +2 attack speed, strip all other AS modifiers ----
+        if (from.getItem() == ModItems.FIDDLE.get()) {
+            removeAttackSpeedModifier(entity, FIDDLE_ATTACK_SPEED_UUID);
+            entity.getPersistentData().putBoolean(PKEY_FIDDLE_EQUIPPED, false);
+        }
+        if (to.getItem() == ModItems.FIDDLE.get()) {
+            applyAttackSpeedModifier(entity, FIDDLE_ATTACK_SPEED_UUID, Config.fiddleAttackSpeed);
+            entity.getPersistentData().putBoolean(PKEY_FIDDLE_EQUIPPED, true);
+        }
+
+        // ---- Blood-Soaked Rose: -50% attack speed, +weapon base damage ----
+        if (from.getItem() == ModItems.BLOOD_SOAKED_ROSE.get()) {
+            removeAttackSpeedModifier(entity, BLOOD_SOAKED_ROSE_ATTACK_SPEED_UUID);
+            removeAttackDamageModifier(entity, BLOOD_SOAKED_ROSE_ATTACK_UUID);
+            clearBloodSoakedRoseData(entity);
+        }
+        if (to.getItem() == ModItems.BLOOD_SOAKED_ROSE.get()) {
+            var data = entity.getPersistentData();
+            data.putBoolean(PKEY_BLOOD_SOAKED_ROSE_EQUIPPED, true);
+            applyAttackSpeedModifier(entity, BLOOD_SOAKED_ROSE_ATTACK_SPEED_UUID, -0.5);
+            if (entity instanceof Player player) {
+                double weaponDmg = getMainHandWeaponAttackDamage(player);
+                if (weaponDmg > 0) {
+                    applyBloodSoakedRoseAttackModifier(entity, weaponDmg);
+                }
+                data.putDouble(PKEY_BLOOD_SOAKED_ROSE_WEAPON_DMG, weaponDmg);
+            }
+        }
+
+        // ---- Jeweled Mask: random positive buff cycle ----
+        if (from.getItem() == ModItems.JEWELED_MASK.get()) {
+            // Remove current buff before clearing data
+            String effectId = entity.getPersistentData().getString(PKEY_JEWELED_MASK_CURRENT_EFFECT);
+            if (!effectId.isEmpty()) {
+                var effect = ForgeRegistries.MOB_EFFECTS.getValue(ResourceLocation.tryParse(effectId));
+                if (effect != null) {
+                    entity.removeEffect(effect);
+                }
+            }
+            entity.getPersistentData().remove(PKEY_JEWELED_MASK_ACTIVE);
+            entity.getPersistentData().remove(PKEY_JEWELED_MASK_NEXT_TRIGGER);
+            entity.getPersistentData().remove(PKEY_JEWELED_MASK_CURRENT_EFFECT);
+        }
+        if (to.getItem() == ModItems.JEWELED_MASK.get()) {
+            entity.getPersistentData().putBoolean(PKEY_JEWELED_MASK_ACTIVE, true);
+            entity.getPersistentData().putLong(PKEY_JEWELED_MASK_NEXT_TRIGGER, entity.level().getGameTime());
+            entity.getPersistentData().putString(PKEY_JEWELED_MASK_CURRENT_EFFECT, "");
+        }
+
+        // ---- Sere Talon: 2 random debuffs + 3 random buffs, permanent while equipped ----
+        if (from.getItem() == ModItems.SERE_TALON.get()) {
+            clearSereTalonEffects(entity);
+        }
+        if (to.getItem() == ModItems.SERE_TALON.get()) {
+            entity.getPersistentData().putBoolean(PKEY_SERE_TALON_EQUIPPED, true);
+            rollAndApplySereTalonEffects(entity);
+        }
+
+        // ---- Preserved Fog: attack speed reduction ----
+        if (from.getItem() == ModItems.PRESERVED_FOG.get()) {
+            removeAttackSpeedModifier(entity, PRESERVED_FOG_ATTACK_SPEED_UUID);
+        }
+        if (to.getItem() == ModItems.PRESERVED_FOG.get()) {
+            applyAttackSpeedModifier(entity, PRESERVED_FOG_ATTACK_SPEED_UUID, Config.preservedFogAttackSpeed);
         }
 
         // ---- Mini Regent: equip state / accumulated ATK ----
@@ -827,6 +1296,41 @@ public class ModEventHandler {
         }
         if (to.getItem() == ModItems.VITRUVIAN_MINION.get()) {
             entity.getPersistentData().putBoolean(PKEY_VITRUVIAN_MINION_EQUIPPED, true);
+        }
+
+        // ---- Self-Forming Clay: cooldown cleanup ----
+        if (from.getItem() == ModItems.SELF_FORMING_CLAY.get()) {
+            entity.getPersistentData().remove(PKEY_SELF_FORMING_CLAY_COOLDOWN);
+        }
+
+        // ---- Charon's Ashes: stacks cleanup ----
+        if (from.getItem() == ModItems.CHARONS_ASHES.get()) {
+            entity.getPersistentData().remove(PKEY_CHARONS_ASHES_STACKS);
+            entity.getPersistentData().remove(PKEY_CHARONS_ASHES_LAST_ITEM);
+            entity.getPersistentData().remove(PKEY_CHARONS_ASHES_LAST_COUNT);
+        }
+
+        // ---- Demon Tongue: cooldown cleanup ----
+        if (from.getItem() == ModItems.DEMON_TONGUE.get()) {
+            entity.getPersistentData().remove(PKEY_DEMON_TONGUE_COOLDOWN);
+        }
+
+        // ---- Ruined Helmet: modifier cleanup ----
+        if (from.getItem() == ModItems.RUINED_HELMET.get()) {
+            removeRuinedHelmetModifier(entity);
+        }
+
+        // ---- Brimstone: stacks / modifier cleanup ----
+        if (from.getItem() == ModItems.BRIMSTONE.get()) {
+            entity.getPersistentData().remove(PKEY_BRIMSTONE_STACKS);
+            entity.getPersistentData().remove(PKEY_BRIMSTONE_LAST_STACK);
+            entity.getPersistentData().remove(PKEY_BRIMSTONE_LAST_ATTACK);
+            removeBrimstoneAttackModifier(entity);
+        }
+
+        // ---- Fiddle: strip any non-fiddle AS modifiers on any curio change ----
+        if (entity.getPersistentData().getBoolean(PKEY_FIDDLE_EQUIPPED)) {
+            stripNonFiddleAttackSpeed(entity);
         }
     }
 
@@ -951,6 +1455,60 @@ public class ModEventHandler {
             blackBloodTick = 0;
         }
 
+        // ---- Charon's Ashes: track main-hand item count decrease for projectile consumption ----
+        var ashes = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CHARONS_ASHES.get()));
+        if (ashes.isPresent()) {
+            var mainHand = player.getMainHandItem();
+            String currentItem = mainHand.isEmpty() ? "" : ForgeRegistries.ITEMS.getKey(mainHand.getItem()).toString();
+            int currentCount = mainHand.getCount();
+            String lastItem = player.getPersistentData().getString(PKEY_CHARONS_ASHES_LAST_ITEM);
+            int lastCount = player.getPersistentData().getInt(PKEY_CHARONS_ASHES_LAST_COUNT);
+            if (!lastItem.isEmpty() && lastItem.equals(currentItem) && currentCount < lastCount) {
+                int diff = lastCount - currentCount;
+                int stacks = player.getPersistentData().getInt(PKEY_CHARONS_ASHES_STACKS);
+                player.getPersistentData().putInt(PKEY_CHARONS_ASHES_STACKS, stacks + diff);
+            }
+            player.getPersistentData().putString(PKEY_CHARONS_ASHES_LAST_ITEM, currentItem);
+            player.getPersistentData().putInt(PKEY_CHARONS_ASHES_LAST_COUNT, currentCount);
+        } else {
+            player.getPersistentData().remove(PKEY_CHARONS_ASHES_LAST_ITEM);
+            player.getPersistentData().remove(PKEY_CHARONS_ASHES_LAST_COUNT);
+        }
+
+        // ---- Red Skull: attack modifier when HP below 50% ----
+        var redSkull = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.RED_SKULL.get()));
+        if (redSkull.isPresent() && player.getHealth() < player.getMaxHealth() * 0.5F) {
+            applyRedSkullAttackModifier(player);
+        } else {
+            removeRedSkullAttackModifier(player);
+        }
+
+        // ---- Ruined Helmet: double first ADDITION attack modifier ----
+        var ruinedHelmet = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.RUINED_HELMET.get()));
+        if (ruinedHelmet.isPresent()) {
+            applyRuinedHelmetModifier(player);
+        } else {
+            removeRuinedHelmetModifier(player);
+        }
+
+        // ---- Brimstone: reset stacks after idle ----
+        var brimstoneTick = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BRIMSTONE.get()));
+        if (brimstoneTick.isPresent()) {
+            long now = player.level().getGameTime();
+            long lastAttack = player.getPersistentData().getLong(PKEY_BRIMSTONE_LAST_ATTACK);
+            if (now - lastAttack >= Config.brimstoneIdleSeconds * 20L) {
+                player.getPersistentData().putInt(PKEY_BRIMSTONE_STACKS, 0);
+                removeBrimstoneAttackModifier(player);
+            }
+        } else {
+            player.getPersistentData().putInt(PKEY_BRIMSTONE_STACKS, 0);
+            removeBrimstoneAttackModifier(player);
+        }
+
         // ---- Divine Right: periodic max mana modifier re-application ----
         // ---- Divine Destiny: mana regen +1/s, max mana% boost via attribute ----
         if (IronSpellsCompat.isLoaded()) {
@@ -986,18 +1544,11 @@ public class ModEventHandler {
             var dataDisk = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                     handler.findFirstCurio(stack -> stack.getItem() == ModItems.DATA_DISK.get()));
             if (dataDisk.isPresent()) {
-                applyLightningSpellPowerModifier(player, DATA_DISK_LIGHTNING_POWER_UUID, 1);
+                IronSpellsCompat.applyAllSpellPowerBonus(player, DATA_DISK_ALL_SPELL_POWER_UUID);
             }
         }
 
-        // ---- Symbiotic Virus: re-apply eldritch spell power each tick ----
-        if (IronSpellsCompat.isLoaded()) {
-            var symbioticVirus = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
-                    handler.findFirstCurio(stack -> stack.getItem() == ModItems.SYMBIOTIC_VIRUS.get()));
-            if (symbioticVirus.isPresent()) {
-                applyEldritchSpellPowerModifier(player, SYMBIOTIC_VIRUS_ELDRITCH_POWER_UUID, 1);
-            }
-        }
+        // ---- Symbiotic Virus: no more spell power (handled in LivingHurt) ----
 
         // ---- Power Cell: re-apply %-based max mana each tick ----
         if (IronSpellsCompat.isLoaded()) {
@@ -1007,7 +1558,7 @@ public class ModEventHandler {
                 float maxMana = IronSpellsCompat.getMaxMana(player);
                 if (maxMana > 0) {
                     applyIronSpellsMaxManaModifier(player, POWER_CELL_MAX_MANA_UUID,
-                            (int) (maxMana * Config.powerCellManaPercent));
+                            (int) (maxMana * Config.POWER_CELL_MANA_PERCENT));
                 }
             }
         }
@@ -1057,6 +1608,39 @@ public class ModEventHandler {
             funeraryMaskSoulTick = 0;
         }
 
+        // ---- Music Box: play random disc from inventory → grant double-hit charge on finish ----
+        var musicBox = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.MUSIC_BOX.get()));
+        if (musicBox.isPresent()) {
+            long gameTime = player.level().getGameTime();
+            boolean playing = player.getPersistentData().getBoolean(PKEY_MUSIC_BOX_PLAYING);
+            long triggerTick = player.getPersistentData().getLong(PKEY_MUSIC_BOX_TRIGGER_TICK);
+
+            if (!playing) {
+                // Pick a random record from all registered RecordItems in the modpack
+                var registryRecords = new java.util.ArrayList<RecordItem>();
+                for (var entry : ForgeRegistries.ITEMS.getEntries()) {
+                    if (entry.getValue() instanceof RecordItem rec) {
+                        registryRecords.add(rec);
+                    }
+                }
+                if (!registryRecords.isEmpty()) {
+                    RecordItem record = registryRecords.get(player.getRandom().nextInt(registryRecords.size()));
+                    player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_PLAYING, true);
+                    player.getPersistentData().putLong(PKEY_MUSIC_BOX_TRIGGER_TICK, gameTime + 3600);
+                    if (player.level() instanceof ServerLevel serverLevel) {
+                        serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                                record.getSound(), SoundSource.RECORDS, 1.0F, 1.0F);
+                    }
+                }
+            } else if (gameTime >= triggerTick) {
+                // Disc playback finished → grant one charge
+                player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_PLAYING, false);
+                player.getPersistentData().putLong(PKEY_MUSIC_BOX_TRIGGER_TICK, 0);
+                player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, true);
+            }
+        }
+
         // ---- Bookmark: detect Goety soul consumption and refund 10% ----
         int bookmarkCharges = player.getPersistentData().getInt(PKEY_BOOKMARK_CHARGES);
         if (bookmarkCharges > 0 && GoetyCompat.isLoaded()) {
@@ -1091,7 +1675,11 @@ public class ModEventHandler {
             player.getPersistentData().putInt(PKEY_IVORY_TILE_LAST_SOULS, currentSouls);
         }
 
-        // ---- Galactic Dust: 10 mana consumed → +1 absorption ----
+        // ---- Galactic Dust: 10 mana consumed → +1 block (格挡) ----
+        // "格挡" = block, a shield-like counter that absorbs incoming damage before it reaches health.
+        // Each block point cancels 1 point of incoming damage. Excess block beyond the hit persists.
+        // Damage <= block → fully negated, remaining block carried over. Damage > block → block wiped, remainder dealt.
+        // Block is consumed in the corresponding LivingHurtEvent handler below.
         if (player.getPersistentData().getBoolean(PKEY_GALACTIC_DUST_EQUIPPED) && IronSpellsCompat.isLoaded()) {
             float currentMana = IronSpellsCompat.getMana(player);
             float lastMana = player.getPersistentData().getFloat(PKEY_GALACTIC_DUST_LAST_MANA);
@@ -1101,7 +1689,12 @@ public class ModEventHandler {
                 double total = remainder + consumed;
                 int gain = (int) (total / 10.0);
                 if (gain > 0) {
-                    player.setAbsorptionAmount(player.getAbsorptionAmount() + gain);
+                    int block = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK) + gain;
+                    long now = player.level().getGameTime();
+                    if (now < player.getPersistentData().getLong(PKEY_HELICAL_DART_BUFF_END)) {
+                        block++;
+                    }
+                    player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, block);
                     player.getPersistentData().putDouble(PKEY_GALACTIC_DUST_REMAINDER, total - gain * 10.0);
                 } else {
                     player.getPersistentData().putDouble(PKEY_GALACTIC_DUST_REMAINDER, total);
@@ -1134,7 +1727,7 @@ public class ModEventHandler {
                 long lastCast = player.getPersistentData().getLong(PKEY_MINI_REGENT_LAST_CAST);
                 int cdTicks = Config.miniRegentCooldownSeconds * 20;
                 if (now - lastCast >= cdTicks) {
-                    int bonus = player.getPersistentData().getInt(PKEY_MINI_REGENT_ATTACK_BONUS) + Config.miniRegentAttackPerCast;
+                    int bonus = player.getPersistentData().getInt(PKEY_MINI_REGENT_ATTACK_BONUS) + Config.MINI_REGENT_ATTACK_PER_CAST;
                     player.getPersistentData().putInt(PKEY_MINI_REGENT_ATTACK_BONUS, bonus);
                     player.getPersistentData().putLong(PKEY_MINI_REGENT_LAST_CAST, now);
                     applyMiniRegentAttackModifier(player, bonus);
@@ -1151,7 +1744,117 @@ public class ModEventHandler {
             }
         }
 
-        // ---- Vitruvian Minion: buff summon health (scan every 2s) ----
+        // ---- Book Repair Knife: track absorption gains → Doom charges ----
+        var knife = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BOOK_REPAIR_KNIFE.get()));
+        if (knife.isPresent()) {
+            float currentAbsorption = player.getAbsorptionAmount();
+            float lastAbsorption = player.getPersistentData().getFloat(PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION);
+            float gain = currentAbsorption - lastAbsorption;
+            if (gain > 0) {
+                double accum = player.getPersistentData().getDouble(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM);
+                int charges = player.getPersistentData().getInt(PKEY_BOOK_REPAIR_KNIFE_CHARGES);
+                double threshold = Config.BOOK_REPAIR_KNIFE_HEAL_PER_CHARGE;
+                accum += gain;
+                while (accum >= threshold) {
+                    accum -= threshold;
+                    charges++;
+                }
+                player.getPersistentData().putDouble(PKEY_BOOK_REPAIR_KNIFE_HEAL_ACCUM, accum);
+                player.getPersistentData().putInt(PKEY_BOOK_REPAIR_KNIFE_CHARGES, charges);
+            }
+            player.getPersistentData().putFloat(PKEY_BOOK_REPAIR_KNIFE_LAST_ABSORPTION, currentAbsorption);
+        }
+
+        // ---- Lords Parasol: zero all villager trade costs when equipped ----
+        var lordsParasol = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.LORDS_PARASOL.get()));
+        if (lordsParasol.isPresent() && player.containerMenu instanceof MerchantMenu) {
+            try {
+                MerchantMenu mm = (MerchantMenu) player.containerMenu;
+                Field traderField = MerchantMenu.class.getDeclaredField("trader");
+                traderField.setAccessible(true);
+                var trader = (net.minecraft.world.item.trading.Merchant) traderField.get(mm);
+
+                Field costAField = MerchantOffer.class.getDeclaredField("costA");
+                costAField.setAccessible(true);
+                Field costBField = MerchantOffer.class.getDeclaredField("costB");
+                costBField.setAccessible(true);
+                for (MerchantOffer offer : trader.getOffers()) {
+                    costAField.set(offer, ItemStack.EMPTY);
+                    costBField.set(offer, ItemStack.EMPTY);
+                }
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
+
+        // ---- Lords Parasol: offhand grants slow falling ----
+        if (player.getOffhandItem().getItem() == ModItems.LORDS_PARASOL.get()) {
+            if (!player.hasEffect(MobEffects.SLOW_FALLING) || player.getEffect(MobEffects.SLOW_FALLING).getDuration() < 100) {
+                player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 200, 0, false, true));
+            }
+        }
+
+        // ---- Distinguished Cape: refresh 3 damage-cap charges every 15s ----
+        var cape = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DISTINGUISHED_CAPE.get()));
+        if (cape.isPresent()) {
+            long now = player.level().getGameTime();
+            long nextRefresh = player.getPersistentData().getLong(PKEY_DISTINGUISHED_CAPE_COOLDOWN);
+            if (now >= nextRefresh) {
+                player.getPersistentData().putInt(PKEY_DISTINGUISHED_CAPE_CHARGES, 3);
+                player.getPersistentData().putLong(PKEY_DISTINGUISHED_CAPE_COOLDOWN, now + 300);
+            }
+        }
+
+        // ---- Jeweled Mask: random positive buff cycle ----
+        if (player.getPersistentData().getBoolean(PKEY_JEWELED_MASK_ACTIVE)) {
+            long now = player.level().getGameTime();
+            long nextTrigger = player.getPersistentData().getLong(PKEY_JEWELED_MASK_NEXT_TRIGGER);
+            if (now >= nextTrigger) {
+                // Remove previous buff
+                String prevEffect = player.getPersistentData().getString(PKEY_JEWELED_MASK_CURRENT_EFFECT);
+                if (!prevEffect.isEmpty()) {
+                    var effect = ForgeRegistries.MOB_EFFECTS.getValue(ResourceLocation.tryParse(prevEffect));
+                    if (effect != null) {
+                        player.removeEffect(effect);
+                    }
+                }
+                // Pick random beneficial effect
+                var beneficial = new java.util.ArrayList<MobEffect>();
+                for (var entry : ForgeRegistries.MOB_EFFECTS.getEntries()) {
+                    if (entry.getValue().isBeneficial()) {
+                        beneficial.add(entry.getValue());
+                    }
+                }
+                if (!beneficial.isEmpty()) {
+                    MobEffect chosen = beneficial.get(player.getRandom().nextInt(beneficial.size()));
+                    int durationTicks = Config.jeweledMaskDurationSeconds * 20;
+                    player.addEffect(new MobEffectInstance(chosen, durationTicks, 0, false, true));
+                    player.getPersistentData().putString(PKEY_JEWELED_MASK_CURRENT_EFFECT,
+                            ForgeRegistries.MOB_EFFECTS.getKey(chosen).toString());
+                    int cooldownTicks = Config.jeweledMaskCooldownSeconds * 20;
+                    player.getPersistentData().putLong(PKEY_JEWELED_MASK_NEXT_TRIGGER, now + durationTicks + cooldownTicks);
+                }
+            }
+        }
+
+        // ---- Sere Talon: periodically re-apply effects if cleared (e.g. milk) ----
+        if (player.getPersistentData().getBoolean(PKEY_SERE_TALON_EQUIPPED)) {
+            long now = player.level().getGameTime();
+            if (now % 100 == 0) { // every 5 seconds
+                var data = player.getPersistentData();
+                String chosen = data.getString(PKEY_SERE_TALON_EFFECTS);
+                if (!chosen.isEmpty()) {
+                    for (String id : chosen.split(",")) {
+                        var effect = ForgeRegistries.MOB_EFFECTS.getValue(ResourceLocation.tryParse(id));
+                        if (effect != null && !player.hasEffect(effect)) {
+                            player.addEffect(new MobEffectInstance(effect, 72000, 0, false, true));
+                        }
+                    }
+                }
+            }
+        }
         if (player.getPersistentData().getBoolean(PKEY_VITRUVIAN_MINION_EQUIPPED)) {
             long now = player.level().getGameTime();
             if (now % 40 == 0) {
@@ -1227,6 +1930,100 @@ public class ModEventHandler {
         removeAttackSpeedModifier(entity, FUNERARY_MASK_ATTACK_SPEED_UUID);
     }
 
+    /** Strip all ATTACK_SPEED modifiers except the Fiddle's own. */
+    private static void stripNonFiddleAttackSpeed(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_SPEED);
+        if (attr != null) {
+            var toRemove = attr.getModifiers().stream()
+                    .filter(m -> !m.getId().equals(FIDDLE_ATTACK_SPEED_UUID))
+                    .toList();
+            toRemove.forEach(attr::removeModifier);
+        }
+    }
+
+    private static void applyRedSkullAttackModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            if (attr.getModifier(RED_SKULL_ATTACK_UUID) != null
+                    && Math.abs(attr.getModifier(RED_SKULL_ATTACK_UUID).getAmount() - Config.redSkullAttackBonus) < 0.001) return;
+            attr.removeModifier(RED_SKULL_ATTACK_UUID);
+            attr.addTransientModifier(new AttributeModifier(RED_SKULL_ATTACK_UUID,
+                    "RedSkullAttackMod", Config.redSkullAttackBonus, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    private static void removeRedSkullAttackModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(RED_SKULL_ATTACK_UUID);
+        }
+    }
+
+    private static void applyRuinedHelmetModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr == null) return;
+        // Find first ADDITION modifier (skip base)
+        double firstAddition = 0;
+        for (AttributeModifier mod : attr.getModifiers()) {
+            if (mod.getOperation() == AttributeModifier.Operation.ADDITION && mod.getId() != RUINED_HELMET_UUID) {
+                firstAddition = mod.getAmount();
+                break;
+            }
+        }
+        if (firstAddition <= 0) {
+            removeRuinedHelmetModifier(entity);
+            return;
+        }
+        if (attr.getModifier(RUINED_HELMET_UUID) != null
+                && Math.abs(attr.getModifier(RUINED_HELMET_UUID).getAmount() - firstAddition) < 0.001) return;
+        attr.removeModifier(RUINED_HELMET_UUID);
+        attr.addTransientModifier(new AttributeModifier(RUINED_HELMET_UUID,
+                "RuinedHelmetMod", firstAddition, AttributeModifier.Operation.ADDITION));
+    }
+
+    private static void removeRuinedHelmetModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(RUINED_HELMET_UUID);
+        }
+    }
+
+    private static void applyBrimstoneAttackModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr == null) return;
+        var data = entity.getPersistentData();
+        int stacks = data.getInt(PKEY_BRIMSTONE_STACKS);
+        double total = stacks * Config.BRIMSTONE_ATTACK_PER_STACK;
+        if (total <= 0) {
+            removeBrimstoneAttackModifier(entity);
+            return;
+        }
+        if (attr.getModifier(BRIMSTONE_ATTACK_UUID) != null
+                && Math.abs(attr.getModifier(BRIMSTONE_ATTACK_UUID).getAmount() - total) < 0.001) return;
+        attr.removeModifier(BRIMSTONE_ATTACK_UUID);
+        attr.addTransientModifier(new AttributeModifier(BRIMSTONE_ATTACK_UUID,
+                "BrimstoneAttackMod", total, AttributeModifier.Operation.ADDITION));
+    }
+
+    private static void removeBrimstoneAttackModifier(LivingEntity entity) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(BRIMSTONE_ATTACK_UUID);
+        }
+    }
+
+    private static void applyBrimstoneTargetAttackModifier(LivingEntity target) {
+        var attr = target.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr == null) return;
+        var data = target.getPersistentData();
+        int applied = data.getInt(PKEY_BRIMSTONE_TARGET_ATK) + Config.BRIMSTONE_TARGET_ATTACK_BONUS;
+        data.putInt(PKEY_BRIMSTONE_TARGET_ATK, applied);
+        data.putInt(PKEY_BRIMSTONE_TARGET_ATTACKS, 0);
+        attr.removeModifier(BRIMSTONE_TARGET_TAG);
+        attr.addTransientModifier(new AttributeModifier(BRIMSTONE_TARGET_TAG,
+                "BrimstoneTargetAtk", applied, AttributeModifier.Operation.ADDITION));
+    }
+
     /** Resolve the Player responsible for a damage source (direct or via projectile/pet). */
     @javax.annotation.Nullable
     private static Player resolvePlayerSource(DamageSource source) {
@@ -1295,59 +2092,137 @@ public class ModEventHandler {
         }
     }
 
-    // === Lightning spell power helpers (Iron's Spells compat) ===
-
-    private static void applyLightningSpellPowerModifier(LivingEntity entity, UUID uuid, int amount) {
-        Attribute attr = ForgeRegistries.ATTRIBUTES.getValue(
-                ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "lightning_spell_power"));
-        if (attr != null) {
-            var instance = entity.getAttribute(attr);
-            if (instance != null) {
-                instance.removeModifier(uuid);
-                instance.addTransientModifier(new AttributeModifier(uuid,
-                        "SayukiLightningPower", amount, AttributeModifier.Operation.ADDITION));
-            }
-        }
-    }
-
-    private static void removeLightningSpellPowerModifier(LivingEntity entity, UUID uuid) {
-        Attribute attr = ForgeRegistries.ATTRIBUTES.getValue(
-                ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "lightning_spell_power"));
-        if (attr != null) {
-            var instance = entity.getAttribute(attr);
-            if (instance != null) {
-                instance.removeModifier(uuid);
-            }
-        }
-    }
-
-    // === Eldritch spell power helpers (Iron's Spells compat) ===
-
-    private static void applyEldritchSpellPowerModifier(LivingEntity entity, UUID uuid, int amount) {
-        Attribute attr = ForgeRegistries.ATTRIBUTES.getValue(
-                ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "eldritch_spell_power"));
-        if (attr != null) {
-            var instance = entity.getAttribute(attr);
-            if (instance != null) {
-                instance.removeModifier(uuid);
-                instance.addTransientModifier(new AttributeModifier(uuid,
-                        "SayukiEldritchPower", amount, AttributeModifier.Operation.ADDITION));
-            }
-        }
-    }
-
-    private static void removeEldritchSpellPowerModifier(LivingEntity entity, UUID uuid) {
-        Attribute attr = ForgeRegistries.ATTRIBUTES.getValue(
-                ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "eldritch_spell_power"));
-        if (attr != null) {
-            var instance = entity.getAttribute(attr);
-            if (instance != null) {
-                instance.removeModifier(uuid);
-            }
-        }
-    }
-
     // === Core lightning helpers (shared by Cracked Core, Infused Core, Emotion Chip) ===
+
+    /** Get effective core cooldown ticks, reduced by 20% if Power Cell is equipped. */
+    private static long getCoreCooldownTicks(Player player) {
+        long baseTicks = Config.crackedCoreCooldownSeconds * 20L;
+        boolean hasPowerCell = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.POWER_CELL.get())).isPresent();
+        return hasPowerCell ? (long) (baseTicks * 0.8) : baseTicks;
+    }
+
+    /** Get bonus damage from Data Disk for core/virus effects. */
+    private static int getDataDiskCoreBonus(Player player) {
+        var dataDisk = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DATA_DISK.get()));
+        return dataDisk.isPresent() ? Config.dataDiskCoreBonus : 0;
+    }
+
+    /** Schedule Symbiotic Virus sonic boom via target PersistentData — first boom at 2s, +0.5s each extra. */
+    private static void performVirusSonicBoom(LivingEntity target, Player player) {
+        int boomCount = 1 + (hasGoldPlatedCables(player) ? 1 : 0);
+        int bonus = getDataDiskCoreBonus(player);
+        float perBoomDamage = 1.0F + (float) bonus / boomCount;
+
+        if (!(target.level() instanceof ServerLevel)) {
+            target.hurt(target.level().damageSources().magic(), perBoomDamage * boomCount);
+            return;
+        }
+
+        var data = target.getPersistentData();
+        // Guard: already queued in this tick — prevent duplicate stacking
+        if (data.contains("SayukiSonicBoomEpoch")) {
+            if (data.getLong("SayukiSonicBoomEpoch") == target.level().getGameTime()) return;
+        }
+        data.putLong("SayukiSonicBoomEpoch", target.level().getGameTime());
+
+        int existingRemaining = data.getInt("SayukiSonicBoomRemaining");
+        data.putFloat("SayukiSonicBoomDamage", perBoomDamage);
+        data.putInt("SayukiSonicBoomRemaining", existingRemaining + boomCount);
+        data.putString("SayukiSonicBoomOwner", player.getStringUUID());
+        if (existingRemaining <= 0) {
+            data.putLong("SayukiSonicBoomTrigger", target.level().getGameTime() + 40);
+        }
+    }
+
+    /** Play sonic boom visual+sound at the given world position. */
+    private static void playSonicBoomEffect(ServerLevel serverLevel, double x, double y, double z) {
+        serverLevel.playSound(null, x, y, z,
+                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 0.1F, 1.0F);
+
+        double maxHeight = 7.0;
+        int rings = 20;
+        for (int ring = 0; ring < rings; ring++) {
+            double dy = (maxHeight * ring) / rings;
+            double radius = 0.25 + dy * 0.10;
+            int particlesPerRing = 2;
+            for (int p = 0; p < particlesPerRing; p++) {
+                double angle = (2.0 * Math.PI * p) / particlesPerRing + ring * 0.5;
+                double px = x + Math.cos(angle) * radius;
+                double pz = z + Math.sin(angle) * radius;
+                serverLevel.sendParticles(ParticleTypes.SONIC_BOOM,
+                        px, y + 0.1 + dy, pz, 1, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    // === LivingTickEvent: process delayed sonic boom ===
+
+    @SubscribeEvent
+    public static void onLivingTickSonicBoom(LivingEvent.LivingTickEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.level().isClientSide()) return;
+        var data = entity.getPersistentData();
+        int remaining = data.getInt("SayukiSonicBoomRemaining");
+        if (remaining <= 0) return;
+        long triggerTick = data.getLong("SayukiSonicBoomTrigger");
+        if (entity.level().getGameTime() < triggerTick) return;
+
+        // Pop one boom: play effect + apply damage
+        float damage = data.getFloat("SayukiSonicBoomDamage");
+        remaining--;
+
+        if (entity.level() instanceof ServerLevel serverLevel) {
+            playSonicBoomEffect(serverLevel, entity.getX(), entity.getY(), entity.getZ());
+        }
+        entity.hurt(entity.level().damageSources().magic(), damage);
+
+        // Increment metronome counter for the owner
+        String ownerUuid = data.getString("SayukiSonicBoomOwner");
+        if (!ownerUuid.isEmpty() && entity.level() instanceof ServerLevel serverLevel) {
+            ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(UUID.fromString(ownerUuid));
+            if (owner != null) {
+                tryIncrementMetronomeCounter(owner);
+            }
+        }
+
+        if (remaining > 0) {
+            data.putInt("SayukiSonicBoomRemaining", remaining);
+            data.putLong("SayukiSonicBoomTrigger", triggerTick + 10); // 0.5s gap between booms
+        } else {
+            data.remove("SayukiSonicBoomDamage");
+            data.remove("SayukiSonicBoomRemaining");
+            data.remove("SayukiSonicBoomTrigger");
+            data.remove("SayukiSonicBoomEpoch");
+            data.remove("SayukiSonicBoomOwner");
+        }
+    }
+
+    // === LivingTickEvent: Music Box delayed double-hit (1 tick after original hit) ===
+
+    @SubscribeEvent
+    public static void onLivingTickMusicBoxDoubleHit(LivingEvent.LivingTickEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.level().isClientSide()) return;
+        var data = entity.getPersistentData();
+        if (!data.getBoolean(PKEY_MUSIC_BOX_DOUBLE_HIT)) return;
+
+        // Apply second hit (same amount, player-sourced) then clear
+        float amount = data.getFloat("SayukiMusicBoxDmg");
+        String ownerUuid = data.getString("SayukiMusicBoxOwner");
+
+        data.remove(PKEY_MUSIC_BOX_DOUBLE_HIT);
+        data.remove("SayukiMusicBoxDmg");
+        data.remove("SayukiMusicBoxOwner");
+
+        if (entity.level() instanceof ServerLevel serverLevel && !ownerUuid.isEmpty()) {
+            ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(UUID.fromString(ownerUuid));
+            if (owner != null) {
+                entity.hurt(entity.level().damageSources().mobAttack(owner), amount);
+            }
+        }
+    }
 
     private static void summonLightningOnTarget(LivingEntity target, Player player) {
         int boltCount = hasGoldPlatedCables(player) ? 2 : 1;
@@ -1358,6 +2233,11 @@ public class ModEventHandler {
                 target.level().addFreshEntity(bolt);
                 tryIncrementMetronomeCounter(player);
             }
+        }
+        // Data Disk bonus: extra lightning damage
+        int bonus = getDataDiskCoreBonus(player);
+        if (bonus > 0) {
+            target.hurt(target.level().damageSources().lightningBolt(), (float) bonus);
         }
     }
 
@@ -1415,7 +2295,7 @@ public class ModEventHandler {
         int counter = player.getPersistentData().getInt(PKEY_METRONOME_COUNTER) + 1;
         player.getPersistentData().putInt(PKEY_METRONOME_COUNTER, counter);
 
-        int threshold = Config.metronomeLightningThreshold;
+        int threshold = Config.METRONOME_LIGHTNING_THRESHOLD;
         if (counter >= threshold) {
             player.getPersistentData().putInt(PKEY_METRONOME_COUNTER, 0);
             player.getPersistentData().putLong(PKEY_METRONOME_COOLDOWN, now);
@@ -1432,7 +2312,7 @@ public class ModEventHandler {
                     e -> e instanceof Enemy && e.isAlive() && e != player
                             && e.distanceToSqr(player) <= radiusSq);
 
-            float damage = (float) Config.metronomeDamage;
+            float damage = (float) Config.METRONOME_DAMAGE;
             for (LivingEntity hostile : hostiles) {
                 hostile.hurt(hostile.level().damageSources().lightningBolt(), damage);
             }
@@ -1524,6 +2404,44 @@ public class ModEventHandler {
         data.putDouble(PKEY_WHISPERING_WINDOW_DMG, windowDamage + event.getAmount());
     }
 
+    // === Blood-Soaked Rose: weapon damage sync helpers (same logic as Whispering Earring) ===
+
+    private static void applyBloodSoakedRoseAttackModifier(LivingEntity entity, double amount) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(BLOOD_SOAKED_ROSE_ATTACK_UUID);
+            attr.addTransientModifier(new AttributeModifier(BLOOD_SOAKED_ROSE_ATTACK_UUID,
+                    "BloodSoakedRoseAttackMod", amount, AttributeModifier.Operation.ADDITION));
+        }
+    }
+
+    private static void removeAttackDamageModifier(LivingEntity entity, UUID uuid) {
+        var attr = entity.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (attr != null) {
+            attr.removeModifier(uuid);
+        }
+    }
+
+    private static void clearBloodSoakedRoseData(LivingEntity entity) {
+        var data = entity.getPersistentData();
+        data.remove(PKEY_BLOOD_SOAKED_ROSE_EQUIPPED);
+        data.remove(PKEY_BLOOD_SOAKED_ROSE_WEAPON_DMG);
+    }
+
+    private static void syncBloodSoakedRoseWeaponModifier(Player player) {
+        double currentWeaponDmg = getMainHandWeaponAttackDamage(player);
+        var data = player.getPersistentData();
+        double lastKnownDmg = data.getDouble(PKEY_BLOOD_SOAKED_ROSE_WEAPON_DMG);
+
+        if (Math.abs(currentWeaponDmg - lastKnownDmg) > 0.0001) {
+            removeAttackDamageModifier(player, BLOOD_SOAKED_ROSE_ATTACK_UUID);
+            if (currentWeaponDmg > 0) {
+                applyBloodSoakedRoseAttackModifier(player, currentWeaponDmg);
+            }
+            data.putDouble(PKEY_BLOOD_SOAKED_ROSE_WEAPON_DMG, currentWeaponDmg);
+        }
+    }
+
     // === Regalite: Forged Sword mining ===
 
     private static boolean isRegaliteForgedSwordActive(Player player) {
@@ -1607,5 +2525,54 @@ public class ModEventHandler {
             entity.setHealth(entity.getMaxHealth());
             entity.getPersistentData().putBoolean(PKEY_VITRUVIAN_BUFFED, true);
         }
+    }
+
+    // === Sere Talon helpers ===
+
+    /** Pick 2 negative + 3 positive effects at random, store IDs, apply with long duration. */
+    private static void rollAndApplySereTalonEffects(LivingEntity entity) {
+        var negative = new java.util.ArrayList<MobEffect>();
+        var positive = new java.util.ArrayList<MobEffect>();
+        for (var entry : ForgeRegistries.MOB_EFFECTS.getEntries()) {
+            MobEffect effect = entry.getValue();
+            if (effect.isBeneficial()) {
+                positive.add(effect);
+            } else {
+                negative.add(effect);
+            }
+        }
+        var random = entity.getRandom();
+        StringBuilder sb = new StringBuilder();
+        int duration = 72000; // 1 hour, refreshed by tick
+
+        for (int i = 0; i < SERE_TALON_NEGATIVE_COUNT && !negative.isEmpty(); i++) {
+            MobEffect e = negative.remove(random.nextInt(negative.size()));
+            entity.addEffect(new MobEffectInstance(e, duration, 0, false, true));
+            if (!sb.isEmpty()) sb.append(",");
+            sb.append(ForgeRegistries.MOB_EFFECTS.getKey(e));
+        }
+        for (int i = 0; i < SERE_TALON_POSITIVE_COUNT && !positive.isEmpty(); i++) {
+            MobEffect e = positive.remove(random.nextInt(positive.size()));
+            entity.addEffect(new MobEffectInstance(e, duration, 0, false, true));
+            if (!sb.isEmpty()) sb.append(",");
+            sb.append(ForgeRegistries.MOB_EFFECTS.getKey(e));
+        }
+        entity.getPersistentData().putString(PKEY_SERE_TALON_EFFECTS, sb.toString());
+    }
+
+    /** Remove all Sere Talon-granted effects and clear persistent data. */
+    private static void clearSereTalonEffects(LivingEntity entity) {
+        var data = entity.getPersistentData();
+        String chosen = data.getString(PKEY_SERE_TALON_EFFECTS);
+        if (!chosen.isEmpty()) {
+            for (String id : chosen.split(",")) {
+                var effect = ForgeRegistries.MOB_EFFECTS.getValue(ResourceLocation.tryParse(id));
+                if (effect != null) {
+                    entity.removeEffect(effect);
+                }
+            }
+        }
+        data.remove(PKEY_SERE_TALON_EQUIPPED);
+        data.remove(PKEY_SERE_TALON_EFFECTS);
     }
 }

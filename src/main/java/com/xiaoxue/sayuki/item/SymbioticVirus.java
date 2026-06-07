@@ -1,5 +1,5 @@
 /**
- * Sayuki — Symbiotic Virus (Curios relic slot item, IronSpellbooks compat: +1 eldritch spell power)
+ * Sayuki — Symbiotic Virus (Curios relic slot item, sonic boom on melee hit)
  */
 package com.xiaoxue.sayuki.item;
 

@@ -1,6 +1,3 @@
-/**
- * Sayuki — Bone Flute (Curios relic slot item, +2 absorption per melee hit)
- */
 package com.xiaoxue.sayuki.item;
 
 import com.xiaoxue.sayuki.Config;
@@ -22,6 +19,7 @@ public class BoneFlute extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.bone_flute.1", (int) Config.boneFluteHealthPerHit));
+        tooltip.add(Component.translatable("tooltip.sayuki.bone_flute.1"));
+        tooltip.add(Component.translatable("tooltip.sayuki.bone_flute.2"));
     }
 }

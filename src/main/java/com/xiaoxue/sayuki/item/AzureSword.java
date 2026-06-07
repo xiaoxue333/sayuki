@@ -39,7 +39,7 @@ import java.util.Set;
 public class AzureSword extends SwordItem {
     private static final int SLOWNESS_DURATION = 99;
     private static final int SLOWNESS_AMPLIFIER = 9;
-    private static final long COOLDOWN_TICKS = 100;
+    private static final long ATTACK_COOLDOWN_TICKS = 100;
     private static final String TAG_LAST_ATTACK = "SayukiAzureLastAttack";
     public static final String MARK_DOUBLE_DAMAGE = "SayukiAzureDoubleDamage";
 
@@ -51,19 +51,11 @@ public class AzureSword extends SwordItem {
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        long lastAttackTime = getLastAttackTime(stack);
         long currentTime = attacker.level().getGameTime();
 
-        if (currentTime - lastAttackTime < COOLDOWN_TICKS) {
-            return super.hurtEnemy(stack, target, attacker);
-        }
-
-        setLastAttackTime(stack, currentTime);
-
+        // Double-damage mark: always fires on slowed targets, removes one slowness level
         MobEffectInstance slownessEffect = target.getEffect(MobEffects.MOVEMENT_SLOWDOWN);
-        boolean hasSlowness = slownessEffect != null;
-
-        if (hasSlowness) {
+        if (slownessEffect != null) {
             int currentLevel = slownessEffect.getAmplifier();
             if (currentLevel > 0) {
                 target.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
@@ -75,9 +67,15 @@ public class AzureSword extends SwordItem {
             } else {
                 target.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
             }
-
             target.getPersistentData().putBoolean(MARK_DOUBLE_DAMAGE, true);
         }
+
+        // Slowness application: 100t CD with 99t duration preserves 1-tick gap
+        long lastAttackTime = getLastAttackTime(stack);
+        if (currentTime - lastAttackTime < ATTACK_COOLDOWN_TICKS) {
+            return super.hurtEnemy(stack, target, attacker);
+        }
+        setLastAttackTime(stack, currentTime);
 
         target.addEffect(new MobEffectInstance(
                 MobEffects.MOVEMENT_SLOWDOWN,

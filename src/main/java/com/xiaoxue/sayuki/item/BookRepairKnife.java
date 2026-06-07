@@ -1,6 +1,3 @@
-/**
- * Sayuki — Book Repair Knife (Curios relic slot item, healing → Doom charges)
- */
 package com.xiaoxue.sayuki.item;
 
 import com.xiaoxue.sayuki.Config;
@@ -22,6 +19,6 @@ public class BookRepairKnife extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.book_repair_knife.1", (int) Config.bookRepairKnifeHealPerCharge));
+        tooltip.add(Component.translatable("tooltip.sayuki.book_repair_knife.1"));
     }
 }

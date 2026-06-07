@@ -1,5 +1,5 @@
 /**
- * Sayuki — Power Cell (Curios relic slot item, +2 relic slots, +20% max mana IronSpells compat)
+ * Sayuki — Power Cell (Curios relic slot item, +2 relic slots, +20% max mana ISS compat, core CD -20%)
  */
 package com.xiaoxue.sayuki.item;
 
@@ -32,7 +32,7 @@ public class PowerCell extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Power Cell bonus",
-                    Config.powerCellSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.POWER_CELL_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.addTransientSlotModifiers(modifiers));
         }
@@ -43,7 +43,7 @@ public class PowerCell extends Item implements ICurioItem {
         if (!slotContext.entity().level().isClientSide()) {
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Power Cell bonus",
-                    Config.powerCellSlotBonus, AttributeModifier.Operation.ADDITION));
+                    Config.POWER_CELL_SLOT_BONUS, AttributeModifier.Operation.ADDITION));
             CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
                     handler -> handler.removeSlotModifiers(modifiers));
         }
@@ -52,7 +52,8 @@ public class PowerCell extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.power_cell.1", Config.powerCellSlotBonus));
-        tooltip.add(Component.translatable("tooltip.sayuki.power_cell.2", (int) (Config.powerCellManaPercent * 100)));
+        tooltip.add(Component.translatable("tooltip.sayuki.power_cell.1"));
+        tooltip.add(Component.translatable("tooltip.sayuki.power_cell.2"));
+        tooltip.add(Component.translatable("tooltip.sayuki.power_cell.3"));
     }
 }

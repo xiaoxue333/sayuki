@@ -23,5 +23,6 @@ public class GoldPlatedCables extends Item implements ICurioItem {
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.gold_plated_cables.1"));
+        tooltip.add(Component.translatable("tooltip.sayuki.gold_plated_cables.2"));
     }
 }

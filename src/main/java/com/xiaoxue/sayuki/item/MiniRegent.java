@@ -22,8 +22,7 @@ public class MiniRegent extends Item implements ICurioItem {
     @Override
     public void appendHoverText(ItemStack stack, @javax.annotation.Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.sayuki.mini_regent.1",
-                Config.miniRegentAttackPerCast));
+        tooltip.add(Component.translatable("tooltip.sayuki.mini_regent.1"));
         tooltip.add(Component.translatable("tooltip.sayuki.mini_regent.2",
                 Config.miniRegentCooldownSeconds));
         tooltip.add(Component.translatable("tooltip.sayuki.mini_regent.3",

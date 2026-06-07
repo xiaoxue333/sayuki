@@ -15,6 +15,7 @@ import com.xiaoxue.sayuki.init.ModProxy;
 import com.xiaoxue.sayuki.item.ModCreativeModeTab;
 import com.xiaoxue.sayuki.item.ModItems;
 import com.xiaoxue.sayuki.network.ModNetwork;
+import com.xiaoxue.sayuki.recipe.ModRecipes;
 import com.xiaoxue.sayuki.worldgen.ModStructures;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -51,6 +52,7 @@ public class Sayuki {
         ModCreativeModeTab.register(modEventBus);
         ModStructures.register(modEventBus);
         ModEffects.register(modEventBus);
+        ModRecipes.register(modEventBus);
 
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
