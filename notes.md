@@ -1,6 +1,17 @@
 # Sayuki Mod 开发经验笔记
 
-> 上次更新: 2026-06-07 · 本次会话涉及：DARV 剩余5遗物实装（添水、天鹅绒颈圈、贤者之石、星盘、潘多拉魔盒）、领主阳伞零元购重做、尘封魔典锻造模板修正
+> 上次更新: 2026-06-08 · 本次会话涉及：Beauty 8遗物实装、Tanx 3遗物实装/追加、迅捷附魔、棍木物品
+
+---
+
+## 0. 联动模组源码参考
+
+| 模组 | 仓库 |
+|------|------|
+| **Iron's Spells 'n Spellbooks** | https://github.com/iron431/Irons-Spells-n-Spellbooks |
+| **Goety-2** | https://github.com/Polarice3/Goety-2 |
+
+> **原则**：写 reflection/compat 代码前必须查对应仓库源码，不允许瞎编字段名或类名。
 
 ---
 
@@ -172,8 +183,10 @@
 | **故障机器人** | 9/9 | 9 | cracked_core, infused_core, gold_plated_cables, data_disk, symbiotic_virus, emotion_chip, metronome, runic_capacitor, power_cell |
 | **瓦库 (Vakuu)** | 10/10 | 10 | whispering_earring, blood_soaked_rose, choices_paradox, distinguished_cape, fiddle, jeweled_mask, lords_parasol, music_box, preserved_fog, sere_talon |
 | **达弗 DARV (囤积者)** | 12/12 | 12 | dusty_tome, empty_cage, ectoplasm, runic_pyramid, black_star, snecko_eye, calling_bell, sozu, velvet_choker, philosophers_stone, pandoras_box, astrolabe |
+| **坦克斯 (Tanx)** | 8/10 | 10 | sai (7点格挡+10s冷却), meat_cleaver (睡眠+9生命值+菜刀兼容), tanxs_whistle (攻击概率击晕+右键范围击晕10s CD), tri_boomerang (本能附魔消耗品), claws (近战+5+二段伤害), throwing_axe (斧子双击+右键投掷), crossbow (弹射物+1+补箭), iron_club (每4次攻击+1弹射), spiked_gauntlets, war_hammer |
+| **Beauty (尖塔最美丽的女人)** | 8/10 | 10 | looming_fruit (+31最大生命), delicate_frond (正面buff消失→随机新buff), glitter (遗物附魔华彩消耗品), fur_coat (7%设目标生命为1), brilliant_scarf (5%重置全部冷却), blessed_antler (攻击掉3棍木+经验翻倍), diamond_diadem (闲置3s后50%减伤), beautiful_bracelet (3耐铁砧附魔迅捷III), signet_ring (右键→999绿宝石), jewelry_box |
 
-> 总计 **67/67** 遗物全部实装完成。
+> 总计 84/87 遗物效果已实装（2 个 Tanx 遗物 + 1 个 Beauty 遗物 stub 待实现）。
 
 ---
 
@@ -203,7 +216,7 @@
 
 ---
 
-## 10. 本次会话新增/改动的遗物 (2026-06-07)
+## 10. Vakuu 遗物补充/改动 (2026-06-07)
 
 ### 10.1 宝石面具 (JeweledMask)
 
@@ -291,9 +304,24 @@
 
 ---
 
-## 13. 本次会话新增/改动的遗物 (2026-06-07)
+## 13. 批量创建遗物 stub 标准流程
 
-### 13.1 空鸟笼 (EmptyCage)
+适用场景：从桌面 `relics` 文件夹导入新角色遗物贴图，批量生成未实装的占位遗物。
+
+| 步骤 | 操作 | 路径/命令 |
+|------|------|-----------|
+| 1. 贴图转换 | webp→png 64x64，去除 `72px-` 前缀，全小写 | Python Pillow: `img.resize((64,64)).save()` → `textures/item/relics/` |
+| 2. 模型 JSON | 每个物品一个，引用 `sayuki:item/relics/{name}` | `models/item/{name}.json` |
+| 3. Java stub | `extends Item implements ICurioItem`，`appendHoverText` 引用 `tooltip.sayuki.{name}.1` | `item/{ClassName}.java` |
+| 4. ModItems 注册 | `RegistryObject<Item>` + `ITEMS.register()`，带 `stacksTo(1)` | `ModItems.java` |
+| 5. CreativeTab | `pOutput.accept(ModItems.X.get())` | `ModCreativeModeTab.java` |
+| 6. 语言文件 | `"待实装"` / `"TBD"`，按角色分段注释 | `lang/zh_cn.json`, `lang/en_us.json` |
+| 7. Curios 标签 | `sayuki:{name}` 追加到 values 数组 | `data/curios/tags/items/relic.json` |
+| 8. 笔记更新 | 角色行追加到总览表，+stub 计数 | `notes.md` |
+
+## 14. DARV 新增/改动遗物 (2026-06-07)
+
+### 14.1 空鸟笼 (EmptyCage)
 
 | 方面 | 内容 |
 |------|------|
@@ -304,7 +332,7 @@
 | **实现** | `tryAbsorbCurses()` 从 ModEventHandler.onCurioChange 调用；`collectPlayerCurses()` 遍历所有装备栏位和 Curios |
 | **参考** | Enigmatic-Addons 的暴戾卷轴 |
 
-### 13.2 异蛇之眼 (SneckoEye)
+### 14.2 异蛇之眼 (SneckoEye)
 
 | 方面 | 内容 |
 |------|------|
@@ -314,7 +342,7 @@
 | **攻速 UUID** | `SNECKO_SPEED_UUID`（仅一个，无 damage UUID） |
 | **卸下清理** | CurioChange 中调用 `SneckoEye.removeConfusedModifier(entity)` |
 
-### 13.3 灵体外质 (Ectoplasm)
+### 14.3 灵体外质 (Ectoplasm)
 
 | 方面 | 内容 |
 |------|------|
@@ -324,7 +352,7 @@
 | **触发** | `onPlayerTick` 中 `now % 20 == 0` 调用 `Ectoplasm.consumeEmeralds(player)` |
 | **Config** | `ectoplasmSophisticatedBackpacks` (BooleanValue, default true) |
 
-### 13.4 尘封魔典 → 锻造模板
+### 14.4 尘封魔典 → 锻造模板
 
 | 方面 | 内容 |
 |------|------|
@@ -332,7 +360,7 @@
 | **新效果** | 作为锻造模板使用：9 个 `smithing_transform` 配方（剑/镐/斧/锹/锄/头盔/胸甲/护腿/靴子），模板用 `sayuki:dusty_tome`，材料用 `netherite_ingot`，可将对应钻石装备升级为下界合金 |
 | **配方命名** | `netherite_{tool}_tome.json` |
 
-### 13.5 符文金字塔 (RunicPyramid)
+### 14.5 符文金字塔 (RunicPyramid)
 
 | 方面 | 内容 |
 |------|------|
@@ -373,4 +401,28 @@
 
 ### 注册表扫描绑定附魔模式（召唤铃铛）
 `ForgeRegistries.ENCHANTMENTS` 遍历 → 按 `ResourceLocation` path 关键词匹配 → `EnchantmentHelper.setEnchantments` 批量写入。用 NBT 标记避免重复执行。
+
+### 钗 (Sai) — 吸收格挡+冷却模式
+PlayerTick 检测 `player.getAbsorptionAmount() <= 0` → 应用 `ABSORPTION` II（约7点），无限时长。`LivingHurtEvent` 触发时记录冷却结束时间（`now + 200` ticks = 10s）。冷却结束+无吸收时自动重上。
+
+### 切肉刀 (MeatCleaver) — 睡眠累计生命模式
+PlayerTick 追踪 `isSleeping()` 状态转换：从睡眠切到唤醒 + `level.isDay()` → 判定为成功跳过夜晚。直接 `attr.setBaseValue(base + 9.0)` 写入基础值（永不移除），同时 `setHealth` 补回增量。卸下装备不影响已有加成。
+
+### 三刃回旋镖 (TriBoomerang) — 铁砧本能附魔消耗品
+佩戴无效果。`AnvilUpdateEvent` 检测左槽武器 + 右槽回旋镖 → 输出武器+本能附魔，`materialCost=0`。`AnvilRepairEvent` 中取回旋镖原耐久，创建 `damage+1` 副本返还玩家背包（未满则掉落）。`setNoRepair()` + `isEnchantable=false` 阻止修复/经验修补。
+
+### 坦克斯的哨子 (TanxsWhistle) — 概率叠加击晕模式
+AttackEntity（LivingHurt 检测 source 为玩家）→ 骰随机 `[0, 100)` 对比当前概率（从 PersistentData `PKEY_CHANCE` 读取，默认 1%）。命中 → 施加 `JEWELRY_BOX` 效果 3s（已有则叠加时长），重置概率为 1%。未命中 → 概率 +1%。纯攻击事件驱动，零 tick 开销。
+
+### 利爪 (Claws) — 近战+5 & 二段伤害
+`LivingHurtEvent` 中 Claws 佩戴时：`event.setAmount(amount + 5.0)` 加成所有近战（含第二段延迟伤害），然后伤害/2 拆分存入 PersistentData。下 tick `LivingTickEvent` 中 `entity.hurt()` 触发第二段（同样+5）。远程不受影响。
+
+### 投斧 (ThrowingAxe) — 首次攻击双倍+冷却模式
+`LivingHurtEvent` 检测 ThrowingAxe 佩戴 + CD 冷却完毕（`PKEY_THROWING_AXE_COOLDOWN`）→ 记录当前伤害，设 200 ticks CD，标记 `PKEY_THROWING_AXE_DOUBLE`。下 tick `LivingTickEvent` 中 `entity.hurt()` 以相同伤害再打一次。不限伤害类型（近战/投射物/ISS/Goety），次数不叠加（CD 内不触发）。CD 存储在 ItemStack NBT `ThrowingAxeCooldown`。
+
+### 十字弓 (CrossbowRelic) — 弹射物+1 + 无箭补箭
+两个独立 handler：(1) `LivingHurtEvent` 检测 `source.getEntity() instanceof Projectile` 且 owner 为佩戴十字弓的玩家 → `event.setAmount(+1.0)`；(2) `LivingEntityUseItemEvent.Start` 检测佩戴十字弓 + 弓/弩使用 + 背包无 ArrowItem → `ForgeRegistries.ITEMS` 遍历随机选一种 ArrowItem 加入背包。
+
+### 击晕 (JewelryBoxEffect) — 新的负面效果
+`MobEffectCategory.HARMFUL`，金色 `#FFD700`，无等级，`canApplyUpdateEffect` 默认 false（纯标记效果）。施加时已有效果则 duration 叠加。
 

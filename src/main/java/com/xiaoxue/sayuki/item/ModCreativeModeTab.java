@@ -40,6 +40,7 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.HEAVEN_EAR_ORNAMENTS.get());
                         pOutput.accept(ModItems.CHERRY_EAR_ORNAMENTS.get());
                         pOutput.accept(ModItems.HEART_EAR_ORNAMENTS.get());
+                        pOutput.accept(ModItems.GU_MU.get());
                     }).build());
 
     // ===== Tab 2: 角色遗物列表 (5 roles × 9 relics = 45, icon: burning_blood) =====
@@ -143,6 +144,17 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.THROWING_AXE.get());
                         pOutput.accept(ModItems.TRI_BOOMERANG.get());
                         pOutput.accept(ModItems.WAR_HAMMER.get());
+                        // Beauty
+                        pOutput.accept(ModItems.BEAUTIFUL_BRACELET.get());
+                        pOutput.accept(ModItems.BLESSED_ANTLER.get());
+                        pOutput.accept(ModItems.BRILLIANT_SCARF.get());
+                        pOutput.accept(ModItems.DELICATE_FROND.get());
+                        pOutput.accept(ModItems.DIAMOND_DIADEM.get());
+                        pOutput.accept(ModItems.FUR_COAT.get());
+                        pOutput.accept(ModItems.GLITTER.get());
+                        pOutput.accept(ModItems.JEWELRY_BOX.get());
+                        pOutput.accept(ModItems.LOOMING_FRUIT.get());
+                        pOutput.accept(ModItems.SIGNET_RING.get());
                     }).build());
 
     public static void register(IEventBus eventBus) {

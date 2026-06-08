@@ -10,14 +10,18 @@ import com.xiaoxue.sayuki.compat.GoetyCompat;
 import com.xiaoxue.sayuki.compat.IronSpellsCompat;
 import com.xiaoxue.sayuki.damage.ModDamageTypes;
 import com.xiaoxue.sayuki.effect.ModEffects;
+import com.xiaoxue.sayuki.enchantment.ModEnchantments;
 import com.xiaoxue.sayuki.item.Astrolabe;
 import com.xiaoxue.sayuki.item.AzureSword;
 import com.xiaoxue.sayuki.item.EmptyCage;
 import com.xiaoxue.sayuki.item.FrustaDominate;
 import com.xiaoxue.sayuki.item.MagentaSpearItem;
 import com.xiaoxue.sayuki.item.ModItems;
-import com.xiaoxue.sayuki.item.PandorasBox;
 import com.xiaoxue.sayuki.item.SneckoEye;
+import com.xiaoxue.sayuki.item.TanxsWhistle;
+import com.xiaoxue.sayuki.item.TriBoomerang;
+import com.xiaoxue.sayuki.item.Glitter;
+import com.xiaoxue.sayuki.item.BeautifulBracelet;
 import com.xiaoxue.sayuki.item.Ectoplasm;
 import com.xiaoxue.sayuki.item.RunicPyramid;
 import com.xiaoxue.sayuki.item.Sozu;
@@ -38,6 +42,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
@@ -52,9 +57,15 @@ import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.RecordItem;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.Tiers;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -76,6 +87,9 @@ import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.AnvilUpdateEvent;
+import net.minecraftforge.event.entity.player.AnvilRepairEvent;
+import net.minecraftforge.event.entity.player.PlayerXpEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -111,6 +125,7 @@ public class ModEventHandler {
     private static final UUID BLOOD_SOAKED_ROSE_ATTACK_SPEED_UUID = UUID.fromString("b1c2d3e4-f5a6-7890-bcde-f12345678902");
     private static final UUID BLOOD_SOAKED_ROSE_ATTACK_UUID = UUID.fromString("c2d3e4f5-a6b7-8901-cdef-123456789023");
     private static final UUID PRESERVED_FOG_ATTACK_SPEED_UUID = UUID.fromString("d3e4f5a6-b7c8-9012-defa-bcdef1234567");
+    private static final UUID LOOMING_FRUIT_MAX_HEALTH_UUID = UUID.fromString("f9a0b1c2-d3e4-5678-9012-def123456790");
     private static final UUID RUINED_HELMET_UUID = UUID.fromString("d6e7f8a9-b0c1-2345-cdef-123456789012");
     private static final UUID BRIMSTONE_ATTACK_UUID = UUID.fromString("e7f8a9b0-c1d2-3456-defa-bcdef1234567");
     private static final UUID BRIMSTONE_TARGET_TAG = UUID.fromString("f8a9b0c1-d2e3-4567-efab-cdef12345678");
@@ -169,11 +184,9 @@ public class ModEventHandler {
     private static final String PKEY_VITRUVIAN_MINION_EQUIPPED = "SayukiVitruvianMinionEquipped";
     private static final String PKEY_VITRUVIAN_BUFFED = "SayukiVitruvianBuffed";
 
-    // Music Box: disc playback & double-hit
+    // Music Box: disc playback
     private static final String PKEY_MUSIC_BOX_PLAYING = "SayukiMusicBoxPlaying";
     private static final String PKEY_MUSIC_BOX_TRIGGER_TICK = "SayukiMusicBoxTriggerTick";
-    private static final String PKEY_MUSIC_BOX_CHARGE = "SayukiMusicBoxCharge";
-    private static final String PKEY_MUSIC_BOX_DOUBLE_HIT = "SayukiMusicBoxDoubleHit";
 
     // Distinguished Cape: damage cap charges
     private static final String PKEY_DISTINGUISHED_CAPE_CHARGES = "SayukiDistinguishedCapeCharges";
@@ -181,6 +194,18 @@ public class ModEventHandler {
 
     // Lords Parasol: detect menu transition to spawn items on every trade panel open
     private static final String PKEY_PARASOL_LAST_MENU = "SayukiParasolLastMenu";
+
+    // Sai: cooldown end time (game tick) for 7-block reset
+    private static final String PKEY_SAI_COOLDOWN = "SayukiSaiCooldown";
+
+    // Meat Cleaver: sleep state tracking
+    private static final String PKEY_MEAT_CLEAVER_WAS_SLEEPING = "SayukiMeatCleaverWasSleeping";
+
+    // Claws: double-hit flag
+    private static final String PKEY_CLAWS_DOUBLE_HIT = "SayukiClawsDoubleHit";
+
+    // Throwing Axe: first-attack double-hit (cooldown stored in item NBT)
+    private static final String PKEY_THROWING_AXE_DOUBLE = "SayukiThrowingAxeDouble";
 
     // Fiddle: attack speed override
     private static final String PKEY_FIDDLE_EQUIPPED = "SayukiFiddleEquipped";
@@ -203,8 +228,15 @@ public class ModEventHandler {
     // Preserved Fog: relic slot bonus (hardcoded +3)
     public static final int PRESERVED_FOG_SLOT_BONUS = 3;
 
+    // Diamond Diadem: last action tick for idle-based damage reduction
+    private static final String PKEY_DIAMOND_DIADEM_LAST_ACTION = "SayukiDiamondDiademLastAction";
+
     /** Guard flag to prevent recursive lightning damage from core items. */
     private static boolean applyingCoreLightning = false;
+
+    // Iron Club: 每攻击4次 → 下一次弹射次数+1 (可叠加)
+    private static final String PKEY_IRON_CLUB_HITS = "SayukiIronClubHits";
+    private static final String PKEY_IRON_CLUB_BONUS = "SayukiIronClubBonus";
 
     /** Check if player has Gold-Plated Cables equipped in curios relic slot. */
     private static boolean hasGoldPlatedCables(Player player) {
@@ -247,6 +279,49 @@ public class ModEventHandler {
             MagentaSpearItem.performRapidThrust(player.level(), player);
             player.getCooldowns().addCooldown(stack.getItem(), Config.magentaSpearCooldownTicks);
             return;
+        }
+
+        // Signet Ring: right-click → consume and give 999 emeralds
+        if (stack.getItem() == ModItems.SIGNET_RING.get()) {
+            if (player.level().isClientSide()) return;
+            stack.shrink(1);
+            ItemStack emeralds = new ItemStack(net.minecraft.world.item.Items.EMERALD, 999);
+            if (!player.getInventory().add(emeralds)) {
+                player.drop(emeralds, false);
+            }
+            return;
+        }
+
+        // Tanx's Whistle: right-click → area stun with cooldown
+        if (stack.getItem() == ModItems.TANXS_WHISTLE.get()) {
+            if (player.level().isClientSide()) return;
+            if (player.getCooldowns().isOnCooldown(stack.getItem())) return;
+            TanxsWhistle.areaStun(player, Config.tanxsWhistleAreaRadius);
+            player.getCooldowns().addCooldown(stack.getItem(), Config.tanxsWhistleAreaCooldownSeconds * 20);
+            return;
+        }
+
+        // Throwing Axe: right-click with an axe → throw it
+        if (stack.getItem() instanceof net.minecraft.world.item.AxeItem) {
+            var ta = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                    handler.findFirstCurio(s -> s.getItem() == ModItems.THROWING_AXE.get()));
+            if (ta.isPresent()) {
+                if (player.level().isClientSide()) {
+                    return;
+                }
+                player.getCooldowns().addCooldown(stack.getItem(), 20);
+                var entity = new com.xiaoxue.sayuki.entity.ThrownAxeEntity(player.level(), player, stack.copy());
+                entity.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 2.5F, 1.0F);
+                entity.setOwner(player);
+                if (player.getAbilities().instabuild) {
+                    entity.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
+                }
+                player.level().addFreshEntity(entity);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+                return;
+            }
         }
     }
 
@@ -297,6 +372,25 @@ public class ModEventHandler {
         if (charges > 0 && event.getAmount() > 1.0F) {
             event.setAmount(1.0F);
             player.getPersistentData().putInt(PKEY_DISTINGUISHED_CAPE_CHARGES, charges - 1);
+        }
+    }
+
+    // === LivingHurt: Diamond Diadem — 50% DR while idle ===
+
+    @SubscribeEvent
+    public static void onLivingHurtDiamondDiadem(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var diadem = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DIAMOND_DIADEM.get()));
+        if (diadem.isEmpty()) return;
+
+        long now = player.level().getGameTime();
+        long lastAction = player.getPersistentData().getLong(PKEY_DIAMOND_DIADEM_LAST_ACTION);
+        long idleTicks = Config.diamondDiademIdleSeconds * 20L;
+        if (lastAction > 0 && now - lastAction >= idleTicks) {
+            event.setAmount(event.getAmount() * 0.5F);
         }
     }
 
@@ -463,6 +557,13 @@ public class ModEventHandler {
         if (!(event.getSource().getEntity() instanceof Player player)) return;
         if (event.getEntity() == player) return; // skip self-damage recursion
 
+        // Diamond Diadem: record last action time
+        var diadem = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.DIAMOND_DIADEM.get()));
+        if (diadem.isPresent()) {
+            player.getPersistentData().putLong(PKEY_DIAMOND_DIADEM_LAST_ACTION, player.level().getGameTime());
+        }
+
         // Azure Sword double damage
         ItemStack weapon = player.getMainHandItem();
         if (weapon.getItem() == ModItems.AZURE_SWORD.get()) {
@@ -471,6 +572,33 @@ public class ModEventHandler {
                 target.getPersistentData().remove(AzureSword.MARK_DOUBLE_DAMAGE);
                 event.setAmount(event.getAmount() * 2.0F);
             }
+        }
+
+        // Instinct enchantment: double weapon damage
+        if (EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.INSTINCT.get(), weapon) > 0) {
+            event.setAmount(event.getAmount() * 2.0F);
+        }
+
+        // Claws: +5 melee damage then split into two hits
+        var claws = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CLAWS.get()));
+        if (claws.isPresent()) {
+            event.setAmount(event.getAmount() + 5.0F);
+            LivingEntity target = event.getEntity();
+            target.getPersistentData().putBoolean(PKEY_CLAWS_DOUBLE_HIT, true);
+            target.getPersistentData().putFloat("SayukiClawsDmg", event.getAmount() / 2.0F);
+            target.getPersistentData().putString("SayukiClawsOwner", player.getStringUUID());
+            event.setAmount(event.getAmount() / 2.0F);
+        }
+
+        // Throwing Axe: double-hit when attacking with an axe
+        var throwingAxe = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.THROWING_AXE.get()));
+        if (throwingAxe.isPresent() && weapon.getItem() instanceof net.minecraft.world.item.AxeItem) {
+            LivingEntity target = event.getEntity();
+            target.getPersistentData().putBoolean(PKEY_THROWING_AXE_DOUBLE, true);
+            target.getPersistentData().putFloat("SayukiThrowingAxeDmg", event.getAmount());
+            target.getPersistentData().putString("SayukiThrowingAxeOwner", player.getStringUUID());
         }
 
         // Whispering Earring
@@ -606,20 +734,31 @@ public class ModEventHandler {
             }
         }
 
-        // ---- Music Box: consume charge → mark target for double-hit ----
-        if (player.getPersistentData().getBoolean(PKEY_MUSIC_BOX_CHARGE)) {
-            player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, false);
-            LivingEntity target = event.getEntity();
-            target.getPersistentData().putBoolean(PKEY_MUSIC_BOX_DOUBLE_HIT, true);
-            target.getPersistentData().putFloat("SayukiMusicBoxDmg", event.getAmount());
-            target.getPersistentData().putString("SayukiMusicBoxOwner", player.getStringUUID());
-        }
-
         // ---- Snecko Eye: apply Confused Power (random attack speed 0~3) on each attack ----
         var sneckoEye = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.SNECKO_EYE.get()));
         if (sneckoEye.isPresent()) {
             SneckoEye.applyConfused(player);
+        }
+
+        // ---- Iron Club: count hits, every 4 hits → +1 projectile bounce ----
+        var ironClub = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.IRON_CLUB.get()));
+        if (ironClub.isPresent()) {
+            int hits = player.getPersistentData().getInt(PKEY_IRON_CLUB_HITS) + 1;
+            if (hits >= 4) {
+                hits = 0;
+                int bonus = player.getPersistentData().getInt(PKEY_IRON_CLUB_BONUS) + 1;
+                player.getPersistentData().putInt(PKEY_IRON_CLUB_BONUS, bonus);
+            }
+            player.getPersistentData().putInt(PKEY_IRON_CLUB_HITS, hits);
+        }
+
+        // ---- Tanx's Whistle: stun on melee attack, 1% base + stacking ----
+        var tanxsWhistle = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.TANXS_WHISTLE.get()));
+        if (tanxsWhistle.isPresent()) {
+            TanxsWhistle.tryStun(player, event.getEntity());
         }
     }
 
@@ -659,6 +798,13 @@ public class ModEventHandler {
         int bounceCount = projectile.getPersistentData().getInt(PKEY_BOUNCE_COUNT);
         int maxBounces = hasDrake ? 6 : 2;
         if (hasSnecko) maxBounces += 2;
+        int swiftLevel = EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.SWIFTNESS.get(), player.getMainHandItem());
+        if (swiftLevel > 0) maxBounces += swiftLevel;
+        int ironClubBonus = player.getPersistentData().getInt(PKEY_IRON_CLUB_BONUS);
+        if (ironClubBonus > 0) {
+            maxBounces += ironClubBonus;
+            player.getPersistentData().putInt(PKEY_IRON_CLUB_BONUS, 0);
+        }
         double retention = hasDrake ? 0.75 : 0.5;
 
         event.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
@@ -917,6 +1063,21 @@ public class ModEventHandler {
         player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, block);
     }
 
+    // === LivingHurt: Sai — record 10s cooldown on any damage taken ===
+
+    @SubscribeEvent
+    public static void onLivingHurtSai(LivingHurtEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var sai = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SAI.get()));
+        if (sai.isEmpty()) return;
+
+        // Set 10s cooldown from now
+        player.getPersistentData().putLong(PKEY_SAI_COOLDOWN, player.level().getGameTime() + 200);
+    }
+
     // === LivingHurt: Cracked Core — summons lightning bolt on target (shared cooldown) ===
 
     @SubscribeEvent
@@ -1035,12 +1196,92 @@ public class ModEventHandler {
                 .isPresent();
         if (!hasHeavenEarOrnaments) return;
 
-        if (event.getSource().getEntity() instanceof Mob attacker) {
-            attacker.setNoAi(true);
+        if (event.getSource().getEntity() instanceof LivingEntity attacker) {
+            if (attacker instanceof Mob mob) {
+                mob.setNoAi(true);
+            }
             attacker.addEffect(new MobEffectInstance(ModEffects.HEAVEN_DOOR.get(),
                     60, 0, false, false, true)); // 3s
             player.addEffect(new MobEffectInstance(ModEffects.SILENCE.get(),
                     1200, 0, false, false, true)); // 60s cooldown
+        }
+    }
+
+    // === LivingHurt: Fur Coat — 7% chance to set target health to 1 ===
+
+    @SubscribeEvent
+    public static void onLivingHurtFurCoat(LivingHurtEvent event) {
+        LivingEntity target = event.getEntity();
+        if (target.level().isClientSide()) return;
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+
+        var furCoat = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.FUR_COAT.get()));
+        if (furCoat.isEmpty()) return;
+
+        int times = getBrillianceTriggerCount(furCoat.get().stack());
+        for (int i = 0; i < times; i++) {
+            if (player.getRandom().nextFloat() < Config.furCoatChance) {
+                target.setHealth(1.0F);
+                break;
+            }
+        }
+    }
+
+    // === LivingHurt: Brilliant Scarf — 5% chance to reset all cooldowns ===
+
+    @SubscribeEvent
+    public static void onLivingHurtBrilliantScarf(LivingHurtEvent event) {
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var scarf = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BRILLIANT_SCARF.get()));
+        if (scarf.isEmpty()) return;
+
+        int times = getBrillianceTriggerCount(scarf.get().stack());
+        for (int i = 0; i < times; i++) {
+            if (player.getRandom().nextFloat() < Config.brilliantScarfChance) {
+                // 1) Reset vanilla attack cooldown
+                try {
+                    var tickerField = Player.class.getDeclaredField("attackStrengthTicker");
+                    tickerField.setAccessible(true);
+                    tickerField.setInt(player, 0);
+                } catch (Exception ignored) {}
+
+                // 2) Reset ISS spell cooldowns
+                IronSpellsCompat.resetAllSpellCooldowns(player);
+
+                // 3) Reset Goety/vanilla item cooldowns
+                GoetyCompat.resetFocusCooldowns(player);
+                break;
+            }
+        }
+    }
+
+    // === LivingHurt: Blessed Antler — drop 3 gu_mu on attack ===
+
+    @SubscribeEvent
+    public static void onLivingHurtBlessedAntler(LivingHurtEvent event) {
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var antler = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BLESSED_ANTLER.get()));
+        if (antler.isEmpty()) return;
+
+        LivingEntity target = event.getEntity();
+        if (target.level() instanceof ServerLevel serverLevel) {
+            ItemStack dropStack = new ItemStack(ModItems.GU_MU.get());
+            for (int i = 0; i < 3; i++) {
+                ItemEntity item = new ItemEntity(serverLevel,
+                        target.getX() + (player.getRandom().nextDouble() - 0.5) * 2.0,
+                        target.getY() + 0.5,
+                        target.getZ() + (player.getRandom().nextDouble() - 0.5) * 2.0,
+                        dropStack.copy());
+                item.setDefaultPickUpDelay();
+                serverLevel.addFreshEntity(item);
+            }
         }
     }
 
@@ -1253,16 +1494,14 @@ public class ModEventHandler {
             entity.getPersistentData().putFloat(PKEY_LUNAR_PASTRY_LAST_MANA, -1);
         }
 
-        // ---- Music Box: playback state / charge ----
+        // ---- Music Box: playback state ----
         if (from.getItem() == ModItems.MUSIC_BOX.get()) {
             entity.getPersistentData().remove(PKEY_MUSIC_BOX_PLAYING);
             entity.getPersistentData().remove(PKEY_MUSIC_BOX_TRIGGER_TICK);
-            entity.getPersistentData().remove(PKEY_MUSIC_BOX_CHARGE);
         }
         if (to.getItem() == ModItems.MUSIC_BOX.get()) {
             entity.getPersistentData().putBoolean(PKEY_MUSIC_BOX_PLAYING, false);
             entity.getPersistentData().putLong(PKEY_MUSIC_BOX_TRIGGER_TICK, 0);
-            entity.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, false);
         }
 
         // ---- Distinguished Cape: -9 max health attribute + damage cap charges ----
@@ -1341,6 +1580,25 @@ public class ModEventHandler {
         }
         if (to.getItem() == ModItems.PRESERVED_FOG.get()) {
             applyAttackSpeedModifier(entity, PRESERVED_FOG_ATTACK_SPEED_UUID, Config.preservedFogAttackSpeed);
+        }
+
+        // ---- Looming Fruit: +31 max health ----
+        if (from.getItem() == ModItems.LOOMING_FRUIT.get()) {
+            removeMaxHealthModifier(entity, LOOMING_FRUIT_MAX_HEALTH_UUID);
+        }
+        if (to.getItem() == ModItems.LOOMING_FRUIT.get()) {
+            applyMaxHealthModifier(entity, LOOMING_FRUIT_MAX_HEALTH_UUID, 31.0);
+        }
+
+        // ---- Diamond Diadem: cleanup last action time on unequip ----
+        if (from.getItem() == ModItems.DIAMOND_DIADEM.get()) {
+            entity.getPersistentData().remove(PKEY_DIAMOND_DIADEM_LAST_ACTION);
+        }
+
+        // ---- Iron Club: cleanup hit counter / bonus on unequip ----
+        if (from.getItem() == ModItems.IRON_CLUB.get()) {
+            entity.getPersistentData().remove(PKEY_IRON_CLUB_HITS);
+            entity.getPersistentData().remove(PKEY_IRON_CLUB_BONUS);
         }
 
         // ---- Mini Regent: equip state / accumulated ATK ----
@@ -1435,11 +1693,6 @@ public class ModEventHandler {
         if (from.getItem() == ModItems.ASTROLABE.get() && entity instanceof Player player) {
             Astrolabe.onUnequip(player);
         }
-
-        // ---- Pandora's Box: randomize attributes with value == 6 on equip ----
-        if (to.getItem() == ModItems.PANDORAS_BOX.get() && entity instanceof Player player) {
-            PandorasBox.randomizeSixes(player);
-        }
     }
 
     // === MobEffectEvent.Added: Sozu blocks all effects, Runic Pyramid doubles first beneficial buff ===
@@ -1474,6 +1727,30 @@ public class ModEventHandler {
         }
     }
 
+    // === MobEffectEvent.Added: Jewelry Box — freeze mob AI ===
+
+    @SubscribeEvent
+    public static void onJewelryBoxAdded(MobEffectEvent.Added event) {
+        if (event.getEffectInstance() == null) return;
+        if (event.getEffectInstance().getEffect() != ModEffects.JEWELRY_BOX.get()) return;
+        if (event.getEntity() instanceof Mob mob) {
+            mob.setNoAi(true);
+        }
+    }
+
+    // === MobEffectEvent.Expired: Jewelry Box — restore AI ===
+
+    @SubscribeEvent
+    public static void onJewelryBoxExpired(MobEffectEvent.Expired event) {
+        if (event.getEntity().level().isClientSide()) return;
+        if (event.getEffectInstance() == null) return;
+        if (event.getEffectInstance().getEffect() != ModEffects.JEWELRY_BOX.get()) return;
+        // Only restore AI if effect was not re-applied (duration extended)
+        if (event.getEntity() instanceof Mob mob && !mob.hasEffect(ModEffects.JEWELRY_BOX.get())) {
+            mob.setNoAi(false);
+        }
+    }
+
     // === MobEffectEvent.Expired: combat → whisper, heaven door → restore AI, Runic Pyramid tracking ===
 
     @SubscribeEvent
@@ -1505,6 +1782,25 @@ public class ModEventHandler {
             if (event.getEffectInstance() != null) {
                 RunicPyramid.onEffectExpired(player, event.getEffectInstance().getEffect());
             }
+
+            // Delicate Frond: when a beneficial effect expires, grant a random new one
+            if (event.getEffectInstance() != null && event.getEffectInstance().getEffect().isBeneficial()) {
+                var frond = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                        handler.findFirstCurio(stack -> stack.getItem() == ModItems.DELICATE_FROND.get()));
+                if (frond.isPresent()) {
+                    var beneficial = new java.util.ArrayList<MobEffect>();
+                    for (var entry : ForgeRegistries.MOB_EFFECTS.getEntries()) {
+                        if (entry.getValue().isBeneficial()) {
+                            beneficial.add(entry.getValue());
+                        }
+                    }
+                    if (!beneficial.isEmpty()) {
+                        MobEffect chosen = beneficial.get(player.getRandom().nextInt(beneficial.size()));
+                        int durationTicks = Config.delicateFrondDurationSeconds * 20;
+                        player.addEffect(new MobEffectInstance(chosen, durationTicks, 0, false, true));
+                    }
+                }
+            }
         }
     }
 
@@ -1530,7 +1826,6 @@ public class ModEventHandler {
         if (living.level().isClientSide()) return;
         if (living instanceof Player) return;
 
-        // Check all nearby players with Velvet Choker
         var nearby = living.level().getEntitiesOfClass(
                 Player.class,
                 new AABB(living.blockPosition()).inflate(10.0),
@@ -1792,7 +2087,7 @@ public class ModEventHandler {
             funeraryMaskSoulTick = 0;
         }
 
-        // ---- Music Box: play random disc from inventory → grant double-hit charge on finish ----
+        // ---- Music Box: play random disc from inventory in a loop ----
         var musicBox = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.MUSIC_BOX.get()));
         if (musicBox.isPresent()) {
@@ -1818,10 +2113,8 @@ public class ModEventHandler {
                     }
                 }
             } else if (gameTime >= triggerTick) {
-                // Disc playback finished → grant one charge
+                // Disc playback finished → loop to next random disc
                 player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_PLAYING, false);
-                player.getPersistentData().putLong(PKEY_MUSIC_BOX_TRIGGER_TICK, 0);
-                player.getPersistentData().putBoolean(PKEY_MUSIC_BOX_CHARGE, true);
             }
         }
 
@@ -2074,6 +2367,37 @@ public class ModEventHandler {
         } else {
             player.getPersistentData().remove(PKEY_PARASOL_LAST_MENU);
         }
+
+        // ---- Sai: maintain 7-block, 10s cooldown after taking damage ----
+        var sai = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SAI.get()));
+        if (sai.isPresent()) {
+            long now = player.level().getGameTime();
+            int block = player.getPersistentData().getInt(PKEY_GALACTIC_DUST_BLOCK);
+            if (now >= player.getPersistentData().getLong(PKEY_SAI_COOLDOWN) && block <= 0) {
+                player.getPersistentData().putInt(PKEY_GALACTIC_DUST_BLOCK, 7);
+            }
+        }
+
+        // ---- Meat Cleaver: detect successful sleep → +9 max HP ----
+        var meatCleaver = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.MEAT_CLEAVER.get()));
+        if (meatCleaver.isPresent()) {
+            boolean sleeping = player.isSleeping();
+            boolean wasSleeping = player.getPersistentData().getBoolean(PKEY_MEAT_CLEAVER_WAS_SLEEPING);
+            player.getPersistentData().putBoolean(PKEY_MEAT_CLEAVER_WAS_SLEEPING, sleeping);
+            // Just woke up after a successful sleep (night skipped → daytime)
+            if (!sleeping && wasSleeping && player.level().isDay()) {
+                var attr = player.getAttribute(Attributes.MAX_HEALTH);
+                if (attr != null) {
+                    attr.setBaseValue(attr.getBaseValue() + 9.0);
+                    player.setHealth(Math.min(player.getMaxHealth(), player.getHealth() + 9));
+                }
+            }
+        } else {
+            player.getPersistentData().remove(PKEY_MEAT_CLEAVER_WAS_SLEEPING);
+        }
+
     }
 
     // === Attribute modifier helpers ===
@@ -2091,6 +2415,13 @@ public class ModEventHandler {
         if (attr != null) {
             attr.removeModifier(uuid);
         }
+    }
+
+    /**
+     * Check if a Curio stack has Brilliance, returning the trigger count (1 or 2).
+     */
+    private static int getBrillianceTriggerCount(ItemStack stack) {
+        return EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.BRILLIANCE.get(), stack) > 0 ? 2 : 1;
     }
 
     private static void applyMaxHealthModifier(LivingEntity entity, UUID uuid, double amount) {
@@ -2409,22 +2740,45 @@ public class ModEventHandler {
         }
     }
 
-    // === LivingTickEvent: Music Box delayed double-hit (1 tick after original hit) ===
+    // === LivingTickEvent: Claws split-hit (1 tick after forged sword hit) ===
 
     @SubscribeEvent
-    public static void onLivingTickMusicBoxDoubleHit(LivingEvent.LivingTickEvent event) {
+    public static void onLivingTickClawsDoubleHit(LivingEvent.LivingTickEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
         var data = entity.getPersistentData();
-        if (!data.getBoolean(PKEY_MUSIC_BOX_DOUBLE_HIT)) return;
+        if (!data.getBoolean(PKEY_CLAWS_DOUBLE_HIT)) return;
 
-        // Apply second hit (same amount, player-sourced) then clear
-        float amount = data.getFloat("SayukiMusicBoxDmg");
-        String ownerUuid = data.getString("SayukiMusicBoxOwner");
+        float amount = data.getFloat("SayukiClawsDmg");
+        String ownerUuid = data.getString("SayukiClawsOwner");
 
-        data.remove(PKEY_MUSIC_BOX_DOUBLE_HIT);
-        data.remove("SayukiMusicBoxDmg");
-        data.remove("SayukiMusicBoxOwner");
+        data.remove(PKEY_CLAWS_DOUBLE_HIT);
+        data.remove("SayukiClawsDmg");
+        data.remove("SayukiClawsOwner");
+
+        if (entity.level() instanceof ServerLevel serverLevel && !ownerUuid.isEmpty()) {
+            ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(UUID.fromString(ownerUuid));
+            if (owner != null) {
+                entity.hurt(entity.level().damageSources().mobAttack(owner), amount);
+            }
+        }
+    }
+
+    // === LivingTickEvent: Throwing Axe double-hit (1 tick after first attack) ===
+
+    @SubscribeEvent
+    public static void onLivingTickThrowingAxeDouble(LivingEvent.LivingTickEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (entity.level().isClientSide()) return;
+        var data = entity.getPersistentData();
+        if (!data.getBoolean(PKEY_THROWING_AXE_DOUBLE)) return;
+
+        float amount = data.getFloat("SayukiThrowingAxeDmg");
+        String ownerUuid = data.getString("SayukiThrowingAxeOwner");
+
+        data.remove(PKEY_THROWING_AXE_DOUBLE);
+        data.remove("SayukiThrowingAxeDmg");
+        data.remove("SayukiThrowingAxeOwner");
 
         if (entity.level() instanceof ServerLevel serverLevel && !ownerUuid.isEmpty()) {
             ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(UUID.fromString(ownerUuid));
@@ -2672,9 +3026,20 @@ public class ModEventHandler {
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
         Player player = event.getEntity();
-        if (!isRegaliteForgedSwordActive(player)) return;
         BlockState state = event.getState();
         if (state.isAir()) return;
+
+        // ---- Sai: faster hay bale breaking ----
+        if (state.is(Blocks.HAY_BLOCK)) {
+            var sai = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                    handler.findFirstCurio(stack -> stack.getItem() == ModItems.SAI.get()));
+            if (sai.isPresent()) {
+                event.setNewSpeed(event.getOriginalSpeed() * 5.0F);
+                return;
+            }
+        }
+
+        if (!isRegaliteForgedSwordActive(player)) return;
 
         // Only boost speed for blocks that need a pickaxe
         float required = state.getDestroySpeed(player.level(), event.getPosition().orElse(null));
@@ -2784,5 +3149,163 @@ public class ModEventHandler {
         }
         data.remove(PKEY_SERE_TALON_EQUIPPED);
         data.remove(PKEY_SERE_TALON_EFFECTS);
+    }
+
+    // === AnvilUpdate + AnvilRepair: TriBoomerang applies Instinct enchantment ===
+
+    @SubscribeEvent
+    public static void onAnvilUpdate(AnvilUpdateEvent event) {
+        ItemStack left = event.getLeft();
+        ItemStack right = event.getRight();
+        if (left.isEmpty() || right.isEmpty()) return;
+        if (right.getItem() != ModItems.TRI_BOOMERANG.get()) return;
+        if (right.getDamageValue() >= right.getMaxDamage()) return; // broken
+        if (!TriBoomerang.canApplyInstinct(left)) return;
+        if (EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.INSTINCT.get(), left) > 0) return;
+
+        ItemStack output = left.copy();
+        output.enchant(ModEnchantments.INSTINCT.get(), 1);
+        event.setOutput(output);
+        event.setCost(15);
+        event.setMaterialCost(0); // we damage the item manually in AnvilRepairEvent
+    }
+
+    @SubscribeEvent
+    public static void onAnvilRepair(AnvilRepairEvent event) {
+        ItemStack right = event.getRight();
+        if (right.getItem() != ModItems.TRI_BOOMERANG.get()) return;
+
+        // Damage the TriBoomerang and return it to the player
+        ItemStack damaged = right.copy();
+        damaged.setDamageValue(damaged.getDamageValue() + 1);
+        if (damaged.getDamageValue() < damaged.getMaxDamage()) {
+            Player player = event.getEntity();
+            if (!player.getInventory().add(damaged)) {
+                player.drop(damaged, false);
+            }
+        }
+    }
+
+    // === AnvilUpdate + AnvilRepair: Glitter applies Brilliance enchantment ===
+
+    @SubscribeEvent
+    public static void onAnvilUpdateGlitter(AnvilUpdateEvent event) {
+        ItemStack left = event.getLeft();
+        ItemStack right = event.getRight();
+        if (left.isEmpty() || right.isEmpty()) return;
+        if (right.getItem() != ModItems.GLITTER.get()) return;
+        if (!Glitter.canApplyBrilliance(left)) return;
+        if (EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.BRILLIANCE.get(), left) > 0) return;
+
+        ItemStack output = left.copy();
+        output.enchant(ModEnchantments.BRILLIANCE.get(), 1);
+        event.setOutput(output);
+        event.setCost(15);
+        event.setMaterialCost(0);
+    }
+
+    @SubscribeEvent
+    public static void onAnvilRepairGlitter(AnvilRepairEvent event) {
+        ItemStack right = event.getRight();
+        if (right.getItem() != ModItems.GLITTER.get()) return;
+
+        // Return Glitter unchanged (no durability limit)
+        Player player = event.getEntity();
+        if (!player.getInventory().add(right.copy())) {
+            player.drop(right.copy(), false);
+        }
+    }
+
+    // === AnvilUpdate + AnvilRepair: Beautiful Bracelet applies Swiftness 3 ===
+
+    @SubscribeEvent
+    public static void onAnvilUpdateBracelet(AnvilUpdateEvent event) {
+        ItemStack left = event.getLeft();
+        ItemStack right = event.getRight();
+        if (left.isEmpty() || right.isEmpty()) return;
+        if (right.getItem() != ModItems.BEAUTIFUL_BRACELET.get()) return;
+        if (right.getDamageValue() >= right.getMaxDamage()) return;
+        if (!BeautifulBracelet.canApplySwift(left)) return;
+        if (EnchantmentHelper.getItemEnchantmentLevel(ModEnchantments.SWIFTNESS.get(), left) >= 3) return;
+
+        ItemStack output = left.copy();
+        output.enchant(ModEnchantments.SWIFTNESS.get(), 3);
+        event.setOutput(output);
+        event.setCost(15);
+        event.setMaterialCost(0);
+    }
+
+    @SubscribeEvent
+    public static void onAnvilRepairBracelet(AnvilRepairEvent event) {
+        ItemStack right = event.getRight();
+        if (right.getItem() != ModItems.BEAUTIFUL_BRACELET.get()) return;
+
+        // Damage the bracelet and return it
+        ItemStack damaged = right.copy();
+        damaged.setDamageValue(damaged.getDamageValue() + 1);
+        if (damaged.getDamageValue() < damaged.getMaxDamage()) {
+            Player player = event.getEntity();
+            if (!player.getInventory().add(damaged)) {
+                player.drop(damaged, false);
+            }
+        }
+    }
+
+    // === LivingHurtEvent: Crossbow relic — projectile damage +1 ===
+
+    @SubscribeEvent
+    public static void onProjectileHurt(LivingHurtEvent event) {
+        if (!(event.getSource().getEntity() instanceof Projectile proj)) return;
+        if (!(proj.getOwner() instanceof Player player)) return;
+
+        var crossbow = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CROSSBOW.get()));
+        if (crossbow.isPresent()) {
+            event.setAmount(event.getAmount() + 1.0F);
+        }
+    }
+
+    // === LivingEntityUseItemEvent: Crossbow relic — supply random arrow when out of ammo ===
+
+    @SubscribeEvent
+    public static void onStartUsingItem(LivingEntityUseItemEvent.Start event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        if (player.level().isClientSide()) return;
+
+        var crossbow = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.CROSSBOW.get()));
+        if (crossbow.isEmpty()) return;
+
+        ItemStack weapon = event.getItem();
+        if (!(weapon.getItem() instanceof BowItem) && !(weapon.getItem() instanceof CrossbowItem)) return;
+
+        // Check if player already has arrows
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (player.getInventory().getItem(i).getItem() instanceof ArrowItem) return;
+        }
+
+        // Supply a random arrow
+        List<ArrowItem> arrows = new ArrayList<>();
+        for (var entry : ForgeRegistries.ITEMS.getEntries()) {
+            if (entry.getValue() instanceof ArrowItem arrow) arrows.add(arrow);
+        }
+        if (!arrows.isEmpty()) {
+            ArrowItem pick = arrows.get(player.getRandom().nextInt(arrows.size()));
+            player.getInventory().add(new ItemStack(pick));
+        }
+    }
+
+    // === PlayerXpEvent.PickupXp: Blessed Antler — double XP gain ===
+
+    @SubscribeEvent
+    public static void onPlayerPickupXp(PlayerXpEvent.PickupXp event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+
+        var antler = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BLESSED_ANTLER.get()));
+        if (antler.isPresent()) {
+            event.getOrb().value *= 2;
+        }
     }
 }

@@ -9,6 +9,7 @@ import com.mojang.logging.LogUtils;
 import com.xiaoxue.sayuki.block.ModBlocks;
 import com.xiaoxue.sayuki.client.ClientProxy;
 import com.xiaoxue.sayuki.effect.ModEffects;
+import com.xiaoxue.sayuki.enchantment.ModEnchantments;
 import com.xiaoxue.sayuki.entity.ModEntities;
 import com.xiaoxue.sayuki.init.CommonProxy;
 import com.xiaoxue.sayuki.init.ModProxy;
@@ -52,6 +53,7 @@ public class Sayuki {
         ModCreativeModeTab.register(modEventBus);
         ModStructures.register(modEventBus);
         ModEffects.register(modEventBus);
+        ModEnchantments.register(modEventBus);
         ModRecipes.register(modEventBus);
 
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);

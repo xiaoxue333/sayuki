@@ -4,7 +4,9 @@
   "package": "com.xiaoxue.sayuki.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "sayuki.refmap.json",
-  "mixins": [],
+  "mixins": [
+    "NaturalSpawnerMixin"
+  ],
   "client": [
     "ItemInHandRendererMixin"
   ],

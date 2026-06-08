@@ -254,9 +254,35 @@ public class ModItems {
     public static final RegistryObject<Item> THROWING_AXE =
             ITEMS.register("throwing_axe", () -> new ThrowingAxe(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> TRI_BOOMERANG =
-            ITEMS.register("tri_boomerang", () -> new TriBoomerang(new Item.Properties().stacksTo(1)));
+            ITEMS.register("tri_boomerang", () -> new TriBoomerang(new Item.Properties()));
     public static final RegistryObject<Item> WAR_HAMMER =
             ITEMS.register("war_hammer", () -> new WarHammer(new Item.Properties().stacksTo(1)));
+
+    // ----- 遗物 — Beauty (尖塔最美丽的女人) -----
+
+    public static final RegistryObject<Item> BEAUTIFUL_BRACELET =
+            ITEMS.register("beautiful_bracelet", () -> new BeautifulBracelet(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> BLESSED_ANTLER =
+            ITEMS.register("blessed_antler", () -> new BlessedAntler(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> BRILLIANT_SCARF =
+            ITEMS.register("brilliant_scarf", () -> new BrilliantScarf(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> DELICATE_FROND =
+            ITEMS.register("delicate_frond", () -> new DelicateFrond(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> DIAMOND_DIADEM =
+            ITEMS.register("diamond_diadem", () -> new DiamondDiadem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> FUR_COAT =
+            ITEMS.register("fur_coat", () -> new FurCoat(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> GLITTER =
+            ITEMS.register("glitter", () -> new Glitter(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> JEWELRY_BOX =
+            ITEMS.register("jewelry_box", () -> new JewelryBox(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> LOOMING_FRUIT =
+            ITEMS.register("looming_fruit", () -> new LoomingFruit(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> SIGNET_RING =
+            ITEMS.register("signet_ring", () -> new SignetRing(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> GU_MU =
+            ITEMS.register("gu_mu", () -> new GuMu(new Item.Properties()));
 
     public static void register(IEventBus eventBus){
         ITEMS.register(eventBus);

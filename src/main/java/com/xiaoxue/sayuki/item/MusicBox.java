@@ -19,6 +19,5 @@ public class MusicBox extends Item implements ICurioItem {
                                 List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.music_box.1"));
-        tooltip.add(Component.translatable("tooltip.sayuki.music_box.2"));
     }
 }

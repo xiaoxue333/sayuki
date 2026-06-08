@@ -19,5 +19,6 @@ public class ThrowingAxe extends Item implements ICurioItem {
                                 List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.sayuki.throwing_axe.1"));
+        tooltip.add(Component.translatable("tooltip.sayuki.throwing_axe.2"));
     }
 }

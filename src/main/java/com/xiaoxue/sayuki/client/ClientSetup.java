@@ -8,6 +8,7 @@ import com.mojang.logging.LogUtils;
 import com.xiaoxue.sayuki.Sayuki;
 import com.xiaoxue.sayuki.entity.ModEntities;
 import com.xiaoxue.sayuki.entity.StellarJadeProjectileRenderer;
+import com.xiaoxue.sayuki.entity.ThrownAxeRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraftforge.api.distmarker.Dist;
@@ -31,5 +32,6 @@ public class ClientSetup {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.STELLAR_JADE_PROJECTILE.get(), StellarJadeProjectileRenderer::new);
         event.registerEntityRenderer(ModEntities.HEART_GRENADE_PROJECTILE.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ModEntities.THROWN_AXE.get(), ThrownAxeRenderer::new);
     }
 }

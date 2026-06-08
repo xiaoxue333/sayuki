@@ -204,6 +204,34 @@ public class Config
             .comment("Jeweled Mask: cooldown in seconds between buff expiration and next buff, Default: 30")
             .defineInRange("jeweledMaskCooldownSeconds", 30, 1, Integer.MAX_VALUE);
 
+    // ===== Beauty: Delicate Frond =====
+    private static final ForgeConfigSpec.IntValue DELICATE_FROND_DURATION_SECONDS = BUILDER
+            .comment("Delicate Frond: duration in seconds of the random positive buff granted when a beneficial effect expires, Default: 30")
+            .defineInRange("delicateFrondDurationSeconds", 30, 1, Integer.MAX_VALUE);
+
+    // ===== Beauty: Fur Coat =====
+    private static final ForgeConfigSpec.DoubleValue FUR_COAT_CHANCE = BUILDER
+            .comment("Fur Coat: chance (0.0-1.0) per attack to set target health to 1, Default: 0.07 (7%)")
+            .defineInRange("furCoatChance", 0.07D, 0.0D, 1.0D);
+
+    // ===== Beauty: Brilliant Scarf =====
+    private static final ForgeConfigSpec.DoubleValue BRILLIANT_SCARF_CHANCE = BUILDER
+            .comment("Brilliant Scarf: chance (0.0-1.0) per attack to reset all cooldowns, Default: 0.05 (5%)")
+            .defineInRange("brilliantScarfChance", 0.05D, 0.0D, 1.0D);
+
+    // ===== Beauty: Diamond Diadem =====
+    private static final ForgeConfigSpec.IntValue DIAMOND_DIADEM_IDLE_SECONDS = BUILDER
+            .comment("Diamond Diadem: seconds of inactivity before 50% damage reduction kicks in, Default: 3")
+            .defineInRange("diamondDiademIdleSeconds", 3, 1, Integer.MAX_VALUE);
+
+    // ===== Tanx: Tanx's Whistle =====
+    private static final ForgeConfigSpec.DoubleValue TANXS_WHISTLE_AREA_RADIUS = BUILDER
+            .comment("Tanx's Whistle: right-click area stun radius in blocks, Default: 10.0")
+            .defineInRange("tanxsWhistleAreaRadius", 10.0D, 1.0D, 64.0D);
+    private static final ForgeConfigSpec.IntValue TANXS_WHISTLE_AREA_COOLDOWN_SECONDS = BUILDER
+            .comment("Tanx's Whistle: right-click area stun cooldown in seconds, Default: 10")
+            .defineInRange("tanxsWhistleAreaCooldownSeconds", 10, 1, Integer.MAX_VALUE);
+
     // ===== Watcher: Preserved Fog =====
     private static final ForgeConfigSpec.DoubleValue PRESERVED_FOG_ATTACK_SPEED = BUILDER
             .comment("Preserved Fog: attack speed reduction when equipped, Default: -0.1")
@@ -257,6 +285,12 @@ public class Config
     public static int jeweledMaskDurationSeconds;
     public static int jeweledMaskCooldownSeconds;
     public static double preservedFogAttackSpeed;
+    public static int delicateFrondDurationSeconds;
+    public static double furCoatChance;
+    public static double brilliantScarfChance;
+    public static int diamondDiademIdleSeconds;
+    public static double tanxsWhistleAreaRadius;
+    public static int tanxsWhistleAreaCooldownSeconds;
     public static boolean ectoplasmSophisticatedBackpacks;
 
     private static boolean validateItemName(final Object obj)
@@ -308,6 +342,12 @@ public class Config
         jeweledMaskDurationSeconds = JEWELED_MASK_DURATION_SECONDS.get();
         jeweledMaskCooldownSeconds = JEWELED_MASK_COOLDOWN_SECONDS.get();
         preservedFogAttackSpeed = PRESERVED_FOG_ATTACK_SPEED.get();
+        delicateFrondDurationSeconds = DELICATE_FROND_DURATION_SECONDS.get();
+        furCoatChance = FUR_COAT_CHANCE.get();
+        brilliantScarfChance = BRILLIANT_SCARF_CHANCE.get();
+        diamondDiademIdleSeconds = DIAMOND_DIADEM_IDLE_SECONDS.get();
+        tanxsWhistleAreaRadius = TANXS_WHISTLE_AREA_RADIUS.get();
+        tanxsWhistleAreaCooldownSeconds = TANXS_WHISTLE_AREA_COOLDOWN_SECONDS.get();
         ectoplasmSophisticatedBackpacks = ECTOPLASM_SOPHISTICATED_BACKPACKS.get();
     }
 }

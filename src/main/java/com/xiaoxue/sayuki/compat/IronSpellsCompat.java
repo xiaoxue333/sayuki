@@ -177,4 +177,26 @@ public class IronSpellsCompat {
             instance.removeModifier(uuid);
         }
     }
+
+    // ===== Cooldown reset (Brilliant Scarf) =====
+
+    public static void resetAllSpellCooldowns(LivingEntity entity) {
+        if (!IRON_SPELLS_LOADED) return;
+        try {
+            Object magicData = magicDataGetPlayerMagicData.invoke(null, entity);
+            if (magicData == null) return;
+            // MagicData.getPlayerCooldowns() → PlayerCooldowns.clearCooldowns()
+            var getPC = magicData.getClass().getMethod("getPlayerCooldowns");
+            Object playerCooldowns = getPC.invoke(magicData);
+            var clearMethod = playerCooldowns.getClass().getMethod("clearCooldowns");
+            clearMethod.invoke(playerCooldowns);
+        } catch (Exception ignored) {}
+    }
+
+    // ===== Staff detection (Beautiful Bracelet) =====
+
+    public static boolean isStaff(net.minecraft.world.item.Item item) {
+        String name = item.getClass().getName();
+        return name.contains("Staff") && name.startsWith("io.redspace.ironsspellbooks");
+    }
 }

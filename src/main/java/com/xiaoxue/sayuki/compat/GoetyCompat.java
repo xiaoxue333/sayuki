@@ -30,7 +30,7 @@ public class GoetyCompat {
                 Class<?> seHelper = Class.forName("com.Polarice3.Goety.utils.SEHelper");
                 seHelperIncreaseSouls = seHelper.getMethod("increaseSouls", Player.class, int.class);
                 seHelperGetSEActive = seHelper.getMethod("getSEActive", Player.class);
-                seHelperGetSouls = seHelper.getMethod("getSoulsAmount", Player.class);
+                seHelperGetSouls = seHelper.getMethod("getSoulAmountInt", Player.class);
 
                 Class<?> totemFinder = Class.forName("com.Polarice3.Goety.utils.TotemFinder");
                 totemFinderFindTotem = totemFinder.getMethod("FindTotem", Player.class);
@@ -144,5 +144,27 @@ public class GoetyCompat {
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    // ===== Cooldown reset (Brilliant Scarf) =====
+
+    /** Reset all vanilla item cooldowns for the player (covers Goety focuses). */
+    public static void resetFocusCooldowns(Player player) {
+        try {
+            var cooldownsObj = player.getCooldowns();
+            var mapField = cooldownsObj.getClass().getDeclaredField("cooldowns");
+            mapField.setAccessible(true);
+            Object map = mapField.get(cooldownsObj);
+            if (map instanceof java.util.Map) {
+                ((java.util.Map<?, ?>) map).clear();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    // ===== Focus detection (Beautiful Bracelet) =====
+
+    public static boolean isFocus(net.minecraft.world.item.Item item) {
+        String name = item.getClass().getName();
+        return name.contains("Focus") && name.startsWith("com.Polarice3.Goety");
     }
 }

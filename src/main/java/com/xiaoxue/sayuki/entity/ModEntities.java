@@ -35,6 +35,15 @@ public class ModEntities {
                             .noSummon()
                             .build("heart_grenade_projectile"));
 
+    public static final RegistryObject<EntityType<ThrownAxeEntity>> THROWN_AXE =
+            ENTITY_TYPES.register("thrown_axe",
+                    () -> EntityType.Builder.<ThrownAxeEntity>of(ThrownAxeEntity::new, MobCategory.MISC)
+                            .sized(0.5F, 0.5F)
+                            .clientTrackingRange(4)
+                            .updateInterval(20)
+                            .noSummon()
+                            .build("thrown_axe"));
+
     public static void register(IEventBus eventBus) {
         ENTITY_TYPES.register(eventBus);
     }

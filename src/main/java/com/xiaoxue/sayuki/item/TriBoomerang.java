@@ -1,9 +1,11 @@
 package com.xiaoxue.sayuki.item;
 
+import com.xiaoxue.sayuki.enchantment.ModEnchantments;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.enchantment.EnchantmentCategory;
 import net.minecraft.world.level.Level;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
@@ -11,7 +13,25 @@ import java.util.List;
 
 public class TriBoomerang extends Item implements ICurioItem {
     public TriBoomerang(Properties properties) {
-        super(properties);
+        super(properties.durability(3).setNoRepair());
+    }
+
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return false;
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return 0;
+    }
+
+    /**
+     * Check if this item can be used as an Instinct enchantment source in the anvil.
+     */
+    public static boolean canApplyInstinct(ItemStack weapon) {
+        Item item = weapon.getItem();
+        return EnchantmentCategory.WEAPON.canEnchant(item);
     }
 
     @Override
