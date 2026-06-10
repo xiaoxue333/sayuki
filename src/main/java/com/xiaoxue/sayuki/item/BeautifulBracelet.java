@@ -2,6 +2,7 @@ package com.xiaoxue.sayuki.item;
 
 import com.xiaoxue.sayuki.compat.GoetyCompat;
 import com.xiaoxue.sayuki.compat.IronSpellsCompat;
+import com.xiaoxue.sayuki.compat.TetraCompat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.TooltipFlag;
@@ -27,11 +28,12 @@ public class BeautifulBracelet extends Item implements ICurioItem {
 
     /**
      * Check if this item can be used as a Swiftness enchantment source in the anvil.
-     * Valid targets: bows, crossbows, ISS staves, Goety focuses.
+     * Valid targets: bows, crossbows, ISS staves, Goety focuses, Tetra bows/crossbows.
      */
     public static boolean canApplySwift(ItemStack stack) {
         Item item = stack.getItem();
         if (item instanceof BowItem || item instanceof CrossbowItem) return true;
+        if (TetraCompat.isBow(stack) || TetraCompat.isCrossbow(stack)) return true;
         if (IronSpellsCompat.isLoaded() && IronSpellsCompat.isStaff(item)) return true;
         if (GoetyCompat.isLoaded() && GoetyCompat.isFocus(item)) return true;
         return false;

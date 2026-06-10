@@ -5,10 +5,14 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "sayuki.refmap.json",
   "mixins": [
-    "NaturalSpawnerMixin"
+    "NaturalSpawnerMixin",
+    "LootTableMixin",
+    "MerchantOfferMixin",
+    "PlayerFoodExhaustionMixin"
   ],
   "client": [
-    "ItemInHandRendererMixin"
+    "ItemInHandRendererMixin",
+    "LightEngineMixin"
   ],
   "server": []
 }

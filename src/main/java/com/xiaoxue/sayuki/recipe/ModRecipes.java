@@ -21,6 +21,14 @@ public class ModRecipes {
             RECIPES.register("crafting_philosophers_stone",
                     () -> new SimpleCraftingRecipeSerializer<>(PhilosophersStoneRecipe::new));
 
+    public static final RegistryObject<RecipeSerializer<DinnerboneStickRecipe>> DINNERBONE_STICK =
+            RECIPES.register("crafting_dinnerbone_stick",
+                    () -> new SimpleCraftingRecipeSerializer<>(DinnerboneStickRecipe::new));
+
+    public static final RegistryObject<RecipeSerializer<CurseStickwoodRecipe>> CURSE_STICKWOOD =
+            RECIPES.register("crafting_curse_stickwood",
+                    () -> new SimpleCraftingRecipeSerializer<>(CurseStickwoodRecipe::new));
+
     public static void register(IEventBus eventBus) {
         RECIPES.register(eventBus);
     }

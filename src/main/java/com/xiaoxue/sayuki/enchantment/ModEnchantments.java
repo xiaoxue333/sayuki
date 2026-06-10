@@ -23,6 +23,12 @@ public class ModEnchantments {
     public static final RegistryObject<Enchantment> SWIFTNESS =
             ENCHANTMENTS.register("swiftness", SwiftnessEnchantment::new);
 
+    public static final RegistryObject<Enchantment> TEZCATLIPOCAS_EMBER =
+            ENCHANTMENTS.register("tezcatlipocas_ember", TezcatlipocasEmberEnchantment::new);
+
+    public static final RegistryObject<Enchantment> DOOM_CURSE =
+            ENCHANTMENTS.register("doom_curse", DoomCurseEnchantment::new);
+
     public static void register(IEventBus eventBus) {
         ENCHANTMENTS.register(eventBus);
     }

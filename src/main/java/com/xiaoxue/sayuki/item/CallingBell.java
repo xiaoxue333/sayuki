@@ -4,8 +4,11 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -31,12 +34,22 @@ public class CallingBell extends Item implements ICurioItem {
 
     @Override
     public void onEquip(SlotContext slotContext, ItemStack prevStack, ItemStack stack) {
-        if (!slotContext.entity().level().isClientSide()) {
+        if (!slotContext.entity().level().isClientSide() && slotContext.entity() instanceof Player player) {
+            // Curio slot bonus
             Multimap<String, AttributeModifier> modifiers = HashMultimap.create();
             modifiers.put("relic", new AttributeModifier(SLOT_MODIFIER_UUID, "Calling Bell bonus",
                     SLOT_BONUS, AttributeModifier.Operation.ADDITION));
-            CuriosApi.getCuriosInventory(slotContext.entity()).ifPresent(
+            CuriosApi.getCuriosInventory(player).ifPresent(
                     handler -> handler.addTransientSlotModifiers(modifiers));
+
+            // One-time: spawn a 铃铛的诅咒 (Curse of the Bell) item drop
+            if (!player.getPersistentData().getBoolean("SayukiCallingBellCurseDropped")) {
+                player.getPersistentData().putBoolean("SayukiCallingBellCurseDropped", true);
+                ItemEntity drop = new ItemEntity(player.level(),
+                        player.getX(), player.getY() + 1.0, player.getZ(),
+                        new ItemStack(ModItems.CURSE_OF_THE_BELL.get()));
+                player.level().addFreshEntity(drop);
+            }
         }
     }
 

@@ -5,6 +5,7 @@
 package com.xiaoxue.sayuki;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -56,6 +57,25 @@ public class Config
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_STRINGS = BUILDER
             .comment("A list of items to log on common setup.")
             .defineListAllowEmpty("items", List.of("minecraft:iron_ingot"), Config::validateItemName);
+
+    // ===== Doom: Boss & Elite entity whitelists =====
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> BOSS_ENTITY_WHITELIST = BUILDER
+            .comment("Boss 实体白名单 (e.g. \"modid:entity_name\"). 填入的实体将成为进阶/Boss击杀计数的判定对象。",
+                     "原版永久判定: 循声守卫(warden), 凋灵(wither), 末影龙(ender_dragon), 远古守卫者(elder_guardian)。",
+                     "已硬编码的模组: goety(诡厄巫法), goety_revelation(诡厄启示录), cataclysm(灾变), meetyourfight(迎战),",
+                     "bosses_of_mass_destruction(祸乱鬼魅), eeeabsmobs(EEEAB), soulslike_weaponry, alexsmobs, alexscaves(洞穴),",
+                     "irons_spellbooks(铁魔法), fantasy_ending(幻想终焉)。白名单用于追加上述未覆盖的 Boss。")
+            .defineListAllowEmpty("bossEntityWhitelist", List.of(), Config::validateEntityName);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> ELITE_ENTITY_WHITELIST = BUILDER
+            .comment("精英怪实体白名单 (e.g. \"modid:entity_name\"). 精英怪受进阶1刷新加成，受进阶14击杀惩罚，以及荒疫缩放。",
+                     "原版默认精英: 闪电苦力怕(minecraft:creeper, 需配合 powered NBT), 恼鬼(vex), 劫掠兽(ravager), 末影人(enderman)。",
+                     "灾变(cataclysm)小boss系列: coralssus, ignited_revenant, the_prowler, the_watcher, kobolediator, wadjet。")
+            .defineListAllowEmpty("eliteEntityWhitelist",
+                    List.of("minecraft:creeper", "minecraft:vex", "minecraft:ravager", "minecraft:enderman",
+                            "cataclysm:coralssus", "cataclysm:ignited_revenant", "cataclysm:the_prowler",
+                            "cataclysm:the_watcher", "cataclysm:kobolediator", "cataclysm:wadjet"),
+                    Config::validateEntityName);
 
     // ===== Weapon configs =====
     private static final ForgeConfigSpec.IntValue MAGENTA_SPEAR_COOLDOWN_TICKS = BUILDER
@@ -252,6 +272,8 @@ public class Config
     public static int magicNumber;
     public static String magicNumberIntroduction;
     public static Set<Item> items;
+    public static Set<EntityType<?>> bossEntityWhitelist;
+    public static Set<EntityType<?>> eliteEntityWhitelist;
     public static int magentaSpearCooldownTicks;
     public static double frustaDamage;
     public static double magentaSpearDamage;
@@ -298,6 +320,11 @@ public class Config
         return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(itemName));
     }
 
+    private static boolean validateEntityName(final Object obj)
+    {
+        return obj instanceof final String entityName && ForgeRegistries.ENTITY_TYPES.containsKey(ResourceLocation.tryParse(entityName));
+    }
+
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
     {
@@ -307,6 +334,14 @@ public class Config
 
         items = ITEM_STRINGS.get().stream()
                 .map(itemName -> ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(itemName)))
+                .collect(Collectors.toSet());
+
+        bossEntityWhitelist = BOSS_ENTITY_WHITELIST.get().stream()
+                .map(name -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.tryParse(name)))
+                .collect(Collectors.toSet());
+
+        eliteEntityWhitelist = ELITE_ENTITY_WHITELIST.get().stream()
+                .map(name -> ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.tryParse(name)))
                 .collect(Collectors.toSet());
 
         magentaSpearCooldownTicks = MAGENTA_SPEAR_COOLDOWN_TICKS.get();

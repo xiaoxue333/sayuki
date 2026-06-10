@@ -3,6 +3,7 @@
  * tab1: sayuki_tab — basic blocks/items (unchanged)
  * tab2: sayuki_sts_tab — character relics (icon: burning_blood)
  * tab3: sayuki_ancient_tab — Ancient Ones relics, starting with Vakuu (icon: whispering_earring)
+ * tab4: sayuki_curse_tab — Tower Curse relics (icon: cursed_pearl)
  */
 package com.xiaoxue.sayuki.item;
 
@@ -11,6 +12,7 @@ import com.xiaoxue.sayuki.block.ModBlocks;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -40,7 +42,6 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.HEAVEN_EAR_ORNAMENTS.get());
                         pOutput.accept(ModItems.CHERRY_EAR_ORNAMENTS.get());
                         pOutput.accept(ModItems.HEART_EAR_ORNAMENTS.get());
-                        pOutput.accept(ModItems.GU_MU.get());
                     }).build());
 
     // ===== Tab 2: 角色遗物列表 (5 roles × 9 relics = 45, icon: burning_blood) =====
@@ -155,6 +156,123 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.JEWELRY_BOX.get());
                         pOutput.accept(ModItems.LOOMING_FRUIT.get());
                         pOutput.accept(ModItems.SIGNET_RING.get());
+                        // Tezcatlipoca
+                        pOutput.accept(ModItems.BIG_HUG.get());
+                        pOutput.accept(ModItems.STORYBOOK.get());
+                        pOutput.accept(ModItems.BAKING_MITTENS.get());
+                        pOutput.accept(ModItems.GOLDEN_COMPASS.get());
+                        pOutput.accept(ModItems.GOLDEN_SEAL.get());
+                        pOutput.accept(ModItems.PUMPKIN_CANDLE.get());
+                        pOutput.accept(ModItems.HOT_COCOA.get());
+                        pOutput.accept(ModItems.TOY_BOX.get());
+                        pOutput.accept(ModItems.NUTRITIOUS_SOUP.get());
+                        pOutput.accept(ModItems.YUMMY_COOKIE_IRONCLAD.get());
+                        pOutput.accept(ModItems.YUMMY_COOKIE_SILENT.get());
+                        pOutput.accept(ModItems.YUMMY_COOKIE_DEFECT.get());
+                        pOutput.accept(ModItems.YUMMY_COOKIE_NECRO.get());
+                        pOutput.accept(ModItems.YUMMY_COOKIE_REGENT.get());
+                        // Pell
+                        pOutput.accept(ModItems.PELL_LEGION.get());
+                        pOutput.accept(ModItems.PELL_GROWTH.get());
+                        pOutput.accept(ModItems.PELL_HORN.get());
+                        pOutput.accept(ModItems.PELL_TEARS.get());
+                        pOutput.accept(ModItems.PELL_FLESH.get());
+                        pOutput.accept(ModItems.PELL_BLOOD.get());
+                        pOutput.accept(ModItems.PELL_TOOTH.get());
+                        pOutput.accept(ModItems.PELL_EYE.get());
+                        pOutput.accept(ModItems.PELL_WING.get());
+                        pOutput.accept(ModItems.PELL_CLAW.get());
+                        // Orobas
+                        pOutput.accept(ModItems.GLASS_EYE.get());
+                        pOutput.accept(ModItems.RADIANT_PEARL.get());
+                        pOutput.accept(ModItems.ELECTRIC_SHRYMP.get());
+                        pOutput.accept(ModItems.DRIFTWOOD.get());
+                        pOutput.accept(ModItems.ARCHAIC_TOOTH.get());
+                        pOutput.accept(ModItems.SEA_GLASS.get());
+                        pOutput.accept(ModItems.PRISMATIC_GEM.get());
+                        pOutput.accept(ModItems.ALCHEMICAL_COFFER.get());
+                        pOutput.accept(ModItems.TOUCH_OF_OROBAS.get());
+                        pOutput.accept(ModItems.SAND_CASTLE.get());
+                        // Neow
+                        pOutput.accept(ModItems.ARCANE_SCROLL.get());
+                        pOutput.accept(ModItems.SILVER_CRUCIBLE.get());
+                        pOutput.accept(ModItems.HEFTY_TABLET.get());
+                        pOutput.accept(ModItems.POMANDER.get());
+                        pOutput.accept(ModItems.BOOMING_CONCH.get());
+                        pOutput.accept(ModItems.GOLDEN_PEARL.get());
+                        pOutput.accept(ModItems.PRECISE_SCISSORS.get());
+                        pOutput.accept(ModItems.MASSIVE_SCROLL.get());
+                        pOutput.accept(ModItems.LARGE_CAPSULE.get());
+                        pOutput.accept(ModItems.SCROLL_BOXES.get());
+                        pOutput.accept(ModItems.NEOWS_BONES.get());
+                        pOutput.accept(ModItems.NEOWS_TALISMAN.get());
+                        pOutput.accept(ModItems.NEOWS_TORMENT.get());
+                        pOutput.accept(ModItems.LEAD_PAPERWEIGHT.get());
+                        pOutput.accept(ModItems.LAVA_ROCK.get());
+                        pOutput.accept(ModItems.LOST_COFFER.get());
+                        pOutput.accept(ModItems.STONE_HUMIDIFIER.get());
+                        pOutput.accept(ModItems.LEAFY_POULTICE.get());
+                        pOutput.accept(ModItems.PRECARIOUS_SHEARS.get());
+                        pOutput.accept(ModItems.SMALL_CAPSULE.get());
+                        pOutput.accept(ModItems.NEW_LEAF.get());
+                        pOutput.accept(ModItems.PHIAL_HOLSTER.get());
+                        pOutput.accept(ModItems.NUTRITIOUS_OYSTER.get());
+                        pOutput.accept(ModItems.WINGED_BOOTS.get());
+                        pOutput.accept(ModItems.CURSED_PEARL.get());
+                    }).build());
+
+    // ===== Tab 4: 塔之诅咒 (icon: rotating curses) =====
+
+    private static final RegistryObject<Item>[] CURSE_ICONS = new RegistryObject[]{
+            ModItems.ASCENDERS_BANE, ModItems.BAD_LUCK, ModItems.CLUMSY, ModItems.CURSE_OF_THE_BELL,
+            ModItems.DEBT, ModItems.DECAY, ModItems.DOUBT, ModItems.ENTHRALLED, ModItems.FOLLY,
+            ModItems.GREED, ModItems.GUILTY, ModItems.INJURY, ModItems.NORMALITY, ModItems.POOR_SLEEP,
+            ModItems.REGRET, ModItems.SHAME, ModItems.SPORE_MIND, ModItems.WRITHE
+    };
+
+    private static ItemStack getCurseTabIcon() {
+        int index = (int) (System.currentTimeMillis() / 1500) % CURSE_ICONS.length;
+        return new ItemStack(CURSE_ICONS[index].get());
+    }
+
+    public final static RegistryObject<CreativeModeTab> SAYUKI_CURSE_TAB =
+            CREATIVE_MODE_TABS.register("sayuki_curse_tab", () -> CreativeModeTab.builder()
+                    .icon(() -> getCurseTabIcon())
+                    .title(Component.translatable("itemGroup.sayuki_curse_tab"))
+                    .displayItems((pParameters, pOutput) -> {
+                        pOutput.accept(ModItems.ASCENDERS_BANE.get());
+                        pOutput.accept(ModItems.BAD_LUCK.get());
+                        pOutput.accept(ModItems.CLUMSY.get());
+                        pOutput.accept(ModItems.CURSE_OF_THE_BELL.get());
+                        pOutput.accept(ModItems.DEBT.get());
+                        pOutput.accept(ModItems.DECAY.get());
+                        pOutput.accept(ModItems.DOUBT.get());
+                        pOutput.accept(ModItems.ENTHRALLED.get());
+                        pOutput.accept(ModItems.FOLLY.get());
+                        pOutput.accept(ModItems.GREED.get());
+                        pOutput.accept(ModItems.GUILTY.get());
+                        pOutput.accept(ModItems.INJURY.get());
+                        pOutput.accept(ModItems.NORMALITY.get());
+                        pOutput.accept(ModItems.POOR_SLEEP.get());
+                        pOutput.accept(ModItems.REGRET.get());
+                        pOutput.accept(ModItems.SHAME.get());
+                        pOutput.accept(ModItems.SPORE_MIND.get());
+                        pOutput.accept(ModItems.WRITHE.get());
+                        pOutput.accept(ModItems.GU_MU.get());
+                        // Desolate Plague (荒疫)
+                        pOutput.accept(ModItems.ACCURSED.get());
+                        pOutput.accept(ModItems.ANCIENT.get());
+                        pOutput.accept(ModItems.DURIAN.get());
+                        pOutput.accept(ModItems.HAUNTINGS.get());
+                        pOutput.accept(ModItems.MAZE.get());
+                        pOutput.accept(ModItems.MIMIC.get());
+                        pOutput.accept(ModItems.MUZZLE.get());
+                        pOutput.accept(ModItems.SCATTER.get());
+                        pOutput.accept(ModItems.SHIELD.get());
+                        pOutput.accept(ModItems.SPEAR.get());
+                        pOutput.accept(ModItems.TROPHY.get());
+                        pOutput.accept(ModItems.TWIST.get());
+                        pOutput.accept(ModItems.VOID.get());
                     }).build());
 
     public static void register(IEventBus eventBus) {

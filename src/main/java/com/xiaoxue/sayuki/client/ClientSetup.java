@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -33,5 +34,10 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.STELLAR_JADE_PROJECTILE.get(), StellarJadeProjectileRenderer::new);
         event.registerEntityRenderer(ModEntities.HEART_GRENADE_PROJECTILE.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ModEntities.THROWN_AXE.get(), ThrownAxeRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerTooltipComponents(RegisterClientTooltipComponentFactoriesEvent event) {
+        event.register(BlightIconTooltipData.class, BlightClientTooltipComponent::new);
     }
 }

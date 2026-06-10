@@ -24,8 +24,9 @@ public class TanxsWhistle extends Item implements ICurioItem {
     }
 
     private static final String PKEY_CHANCE = "SayukiTanxsWhistleChance";
+    private static final String PKEY_UNSTUN_TICK = "SayukiJewelryBoxUnstun";
     private static final int BASE_CHANCE = 1; // 1%
-    private static final int STUN_DURATION = 60; // 3s
+    public static final int STUN_DURATION = 60; // 3s
 
     /**
      * Attempt to stun target. Each call increases probability by 1% on miss.
@@ -39,6 +40,10 @@ public class TanxsWhistle extends Item implements ICurioItem {
             if (!target.hasEffect(ModEffects.JEWELRY_BOX.get())) {
                 target.addEffect(new MobEffectInstance(ModEffects.JEWELRY_BOX.get(), STUN_DURATION, 0,
                         false, false, true));
+            }
+            if (target instanceof Mob mob) {
+                mob.getPersistentData().putLong(PKEY_UNSTUN_TICK, target.level().getGameTime() + STUN_DURATION);
+                mob.setNoAi(true);
             }
             attacker.getPersistentData().putInt(PKEY_CHANCE, BASE_CHANCE);
         } else {
@@ -54,13 +59,14 @@ public class TanxsWhistle extends Item implements ICurioItem {
         if (level.isClientSide()) return;
 
         AABB box = new AABB(user.blockPosition()).inflate(radius);
-        List<Mob> monsters = level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive() && m.canBeCollidedWith());
+        List<Mob> monsters = level.getEntitiesOfClass(Mob.class, box, m -> m.isAlive());
         for (Mob mob : monsters) {
             if (!mob.hasEffect(ModEffects.JEWELRY_BOX.get())) {
                 mob.addEffect(new MobEffectInstance(ModEffects.JEWELRY_BOX.get(), STUN_DURATION, 0,
                         false, false, true));
-                mob.setNoAi(true);
             }
+            mob.getPersistentData().putLong(PKEY_UNSTUN_TICK, level.getGameTime() + STUN_DURATION);
+            mob.setNoAi(true);
         }
         level.playSound(null, user.getX(), user.getY(), user.getZ(),
                 SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.0F, 1.5F);

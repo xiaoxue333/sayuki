@@ -1,5 +1,6 @@
 package com.xiaoxue.sayuki.item;
 
+import com.xiaoxue.sayuki.compat.TetraCompat;
 import com.xiaoxue.sayuki.enchantment.ModEnchantments;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -28,10 +29,12 @@ public class TriBoomerang extends Item implements ICurioItem {
 
     /**
      * Check if this item can be used as an Instinct enchantment source in the anvil.
+     * Valid targets: any vanilla WEAPON-category item, plus Tetra modular weapons.
      */
     public static boolean canApplyInstinct(ItemStack weapon) {
         Item item = weapon.getItem();
-        return EnchantmentCategory.WEAPON.canEnchant(item);
+        if (EnchantmentCategory.WEAPON.canEnchant(item)) return true;
+        return TetraCompat.isMelee(weapon);
     }
 
     @Override

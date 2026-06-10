@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "sayuki:item/curses/poor_sleep"
+  }
+}
