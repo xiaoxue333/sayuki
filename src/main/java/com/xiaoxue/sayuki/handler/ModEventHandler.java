@@ -6,6 +6,7 @@
 package com.xiaoxue.sayuki.handler;
 
 import com.xiaoxue.sayuki.Config;
+import com.xiaoxue.sayuki.Sayuki;
 import com.xiaoxue.sayuki.compat.GoetyCompat;
 import com.xiaoxue.sayuki.compat.IronSpellsCompat;
 import com.xiaoxue.sayuki.damage.ModDamageTypes;
@@ -32,8 +33,17 @@ import com.xiaoxue.sayuki.item.PellClaw;
 import com.xiaoxue.sayuki.item.PellHorn;
 import com.xiaoxue.sayuki.item.PellLegion;
 import com.xiaoxue.sayuki.item.GoldenSeal;
+import com.xiaoxue.sayuki.item.HotCocoa;
 import com.xiaoxue.sayuki.item.BeautifulBracelet;
 import com.xiaoxue.sayuki.item.SeaGlass;
+import com.xiaoxue.sayuki.item.SilverCrucible;
+import com.xiaoxue.sayuki.item.SpikedGauntlets;
+import com.xiaoxue.sayuki.item.WingedBoots;
+import com.xiaoxue.sayuki.item.PhialHolster;
+import com.xiaoxue.sayuki.item.AlchemicalCoffer;
+import com.xiaoxue.sayuki.item.ScrollBoxes;
+import com.xiaoxue.sayuki.item.LostCoffer;
+import com.xiaoxue.sayuki.item.LavaRock;
 import com.xiaoxue.sayuki.item.ArcaneScroll;
 import com.xiaoxue.sayuki.item.Ectoplasm;
 import com.xiaoxue.sayuki.item.RunicPyramid;
@@ -43,6 +53,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -58,6 +72,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
@@ -79,13 +94,14 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.RecordItem;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.Tiers;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -350,6 +366,13 @@ public class ModEventHandler {
             return;
         }
 
+        // Scroll Boxes: right-click → consume, get 3 random ISS spell scrolls
+        if (stack.getItem() == ModItems.SCROLL_BOXES.get()) {
+            if (player.level().isClientSide()) return;
+            ScrollBoxes.onUse(player, stack);
+            return;
+        }
+
         // Signet Ring: right-click → consume and give 999 emeralds
         if (stack.getItem() == ModItems.SIGNET_RING.get()) {
             if (player.level().isClientSide()) return;
@@ -380,6 +403,13 @@ public class ModEventHandler {
             if (!player.getInventory().add(emeralds)) {
                 player.drop(emeralds, false);
             }
+            return;
+        }
+
+        // Lost Coffer: right-click → consume, random potion effect + 2 iron ingots
+        if (stack.getItem() == ModItems.LOST_COFFER.get()) {
+            if (player.level().isClientSide()) return;
+            LostCoffer.onUse(player, stack);
             return;
         }
 
@@ -1397,6 +1427,12 @@ public class ModEventHandler {
         boolean hasPellBlood = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.PELL_BLOOD.get())).isPresent();
         if (hasPellBlood) maxBounces += 1;
+        // Booming Conch: +2 bounces when hitting an elite enemy
+        var boomingConch = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.BOOMING_CONCH.get()));
+        if (boomingConch.isPresent() && isEliteEntity(target)) {
+            maxBounces += 2;
+        }
 
         double retention = hasDrake ? 0.75 : 0.5;
 
@@ -1423,18 +1459,30 @@ public class ModEventHandler {
         }
 
         if (bounceCount < maxBounces) {
-            Vec3 hitPos = target.position();
-            float searchRadius = (float) Config.ringSearchRadius;
-            AABB searchBox = new AABB(hitPos.subtract(searchRadius, searchRadius, searchRadius), 
-                    hitPos.add(searchRadius, searchRadius, searchRadius));
+            LivingEntity nextTarget = null;
 
-            LivingEntity nextTarget = target.level().getEntitiesOfClass(Mob.class, searchBox,
-                    mob -> mob instanceof Enemy && mob != target && mob.isAlive())
-                    .stream()
-                    .min((a, b) -> Double.compare(
-                            a.distanceToSqr(target),
-                            b.distanceToSqr(target)))
-                    .orElse(null);
+            // ---- Scatter blight: first bounce has 1% chance to target self ----
+            boolean hasScatter = bounceCount == 0
+                    && GuMu.getBlightCountForPlayer(player, "scatter") > 0
+                    && player.getRandom().nextInt(100) == 0;
+            if (hasScatter) {
+                nextTarget = player;
+            }
+
+            if (nextTarget == null) {
+                Vec3 hitPos = target.position();
+                float searchRadius = (float) Config.ringSearchRadius;
+                AABB searchBox = new AABB(hitPos.subtract(searchRadius, searchRadius, searchRadius), 
+                        hitPos.add(searchRadius, searchRadius, searchRadius));
+
+                nextTarget = target.level().getEntitiesOfClass(Mob.class, searchBox,
+                        mob -> mob instanceof Enemy && mob != target && mob.isAlive())
+                        .stream()
+                        .min((a, b) -> Double.compare(
+                                a.distanceToSqr(target),
+                                b.distanceToSqr(target)))
+                        .orElse(null);
+            }
 
             if (nextTarget != null) {
                 double bounceSpeed = 1.5;
@@ -4131,7 +4179,7 @@ public class ModEventHandler {
         }
     }
 
-    // === PlayerXpEvent.PickupXp: Blessed Antler — double XP gain ===
+    // === PlayerXpEvent.PickupXp: Blessed Antler — +10% XP gain, Spiked Gauntlets — +10% XP ===
 
     @SubscribeEvent
     public static void onPlayerPickupXp(PlayerXpEvent.PickupXp event) {
@@ -4141,7 +4189,13 @@ public class ModEventHandler {
         var antler = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
                 handler.findFirstCurio(stack -> stack.getItem() == ModItems.BLESSED_ANTLER.get()));
         if (antler.isPresent()) {
-            event.getOrb().value *= 2;
+            event.getOrb().value = (int) Math.ceil(event.getOrb().value * 1.1);
+        }
+
+        var gauntlets = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SPIKED_GAUNTLETS.get()));
+        if (gauntlets.isPresent()) {
+            event.getOrb().value = (int) Math.ceil(event.getOrb().value * 1.1);
         }
     }
 
@@ -4162,6 +4216,9 @@ public class ModEventHandler {
     }
 
     // === 进阶4: MobEffectEvent.Added — beneficial potion duration -33% ===
+    // === 进阶5: MobEffectEvent.Added — cap at 2 effects, remove oldest when exceeded ===
+
+    private static final String PKEY_DOOM5_EFFECT_ORDER = "SayukiDoomTier5EffectOrder";
 
     @SubscribeEvent
     public static void onMobEffectAddedDoom(MobEffectEvent.Added event) {
@@ -4169,18 +4226,87 @@ public class ModEventHandler {
         if (player.level().isClientSide()) return;
         if (!event.getEffectInstance().getEffect().isBeneficial()) return;
         int tier = GuMu.getDoomTier(player);
-        if (tier < 4) return;
-        MobEffectInstance inst = event.getEffectInstance();
-        if (inst.getDuration() > 1) {
-            try {
-                java.lang.reflect.Field durationField = MobEffectInstance.class.getDeclaredField("duration");
-                durationField.setAccessible(true);
-                int duration = durationField.getInt(inst);
-                int reduced = duration * 2 / 3;
-                if (reduced < 1) reduced = 1;
-                durationField.setInt(inst, reduced);
-            } catch (Exception ignored) {}
+
+        // 进阶4: duration -33%
+        if (tier >= 4) {
+            MobEffectInstance inst = event.getEffectInstance();
+            if (inst.getDuration() > 1) {
+                try {
+                    java.lang.reflect.Field durationField = MobEffectInstance.class.getDeclaredField("duration");
+                    durationField.setAccessible(true);
+                    int duration = durationField.getInt(inst);
+                    int reduced = duration * 2 / 3;
+                    if (reduced < 1) reduced = 1;
+                    durationField.setInt(inst, reduced);
+                } catch (Exception ignored) {}
+            }
         }
+
+        // 进阶5: cap beneficial effects, remove oldest when exceeded
+        if (tier < 5) return;
+        int maxEffects = getMaxBeneficialEffects(player);
+        ListTag order = getDoom5EffectOrder(player);
+        String effectId = ForgeRegistries.MOB_EFFECTS.getKey(event.getEffectInstance().getEffect()).toString();
+        order.add(StringTag.valueOf(effectId));
+        saveDoom5EffectOrder(player, order);
+
+        // Count active beneficial effects after this one gets added
+        int count = 0;
+        for (MobEffectInstance active : player.getActiveEffects()) {
+            if (active.getEffect().isBeneficial()) count++;
+        }
+        // The pending effect will make it count+1
+        if (count + 1 > maxEffects) {
+            // Remove oldest tracked effect (first in list) that is still active
+            for (int i = 0; i < order.size() - 1; i++) {
+                String oldestId = order.getString(i);
+                ResourceLocation rl = ResourceLocation.tryParse(oldestId);
+                if (rl != null) {
+                    MobEffect oldest = ForgeRegistries.MOB_EFFECTS.getValue(rl);
+                    if (oldest != null && player.hasEffect(oldest)) {
+                        player.removeEffect(oldest);
+                        order.remove(i);
+                        saveDoom5EffectOrder(player, order);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private static ListTag getDoom5EffectOrder(Player player) {
+        CompoundTag tag = player.getPersistentData();
+        if (tag.contains(PKEY_DOOM5_EFFECT_ORDER, Tag.TAG_LIST)) {
+            return tag.getList(PKEY_DOOM5_EFFECT_ORDER, Tag.TAG_STRING);
+        }
+        return new ListTag();
+    }
+
+    private static void saveDoom5EffectOrder(Player player, ListTag list) {
+        // Clean up expired entries
+        ListTag cleaned = new ListTag();
+        for (int i = 0; i < list.size(); i++) {
+            String id = list.getString(i);
+            ResourceLocation rl = ResourceLocation.tryParse(id);
+            if (rl != null) {
+                MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(rl);
+                if (effect != null && player.hasEffect(effect)) {
+                    cleaned.add(StringTag.valueOf(id));
+                }
+            }
+        }
+        player.getPersistentData().put(PKEY_DOOM5_EFFECT_ORDER, cleaned);
+    }
+
+    private static int getMaxBeneficialEffects(Player player) {
+        int cap = 2;
+        var holster = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.PHIAL_HOLSTER.get()));
+        if (holster.isPresent()) cap += PhialHolster.EFFECT_CAP_BONUS;
+        var coffer = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.ALCHEMICAL_COFFER.get()));
+        if (coffer.isPresent()) cap += AlchemicalCoffer.EFFECT_CAP_BONUS;
+        return cap;
     }
 
     // === 荒疫: 先古强化 — debuff immunity for enemies ===
@@ -4646,7 +4772,7 @@ public class ModEventHandler {
         Player player = event.getEntity();
         int tier = GuMu.getDoomTier(player);
         if (tier >= 6) {
-            com.xiaoxue.sayuki.mixin.DoomTradeTax.enable();
+            DoomTradeTaxHandler.enable();
         }
     }
 
@@ -4654,7 +4780,7 @@ public class ModEventHandler {
     public static void onContainerCloseDoomTrade(PlayerContainerEvent.Close event) {
         if (event.getEntity().level().isClientSide()) return;
         if (!(event.getContainer() instanceof MerchantMenu)) return;
-        com.xiaoxue.sayuki.mixin.DoomTradeTax.disable();
+        DoomTradeTaxHandler.disable();
     }
 
     // ============================================================
@@ -4726,12 +4852,20 @@ public class ModEventHandler {
                 GuMu.addBlight(stickwood, "trophy");     // 可怖奖杯 (round 4+)
             }
 
-            // Random draw from 荒疫箱 (7 placeholder blights, no effect yet)
+            // Random draw from 荒疫箱, exclude non-stacking blights already owned
             List<Item> blightPool = new ArrayList<>(GuMu.BLIGHT_POOL);
-            Item randomBlight = blightPool.get(player.getRandom().nextInt(blightPool.size()));
-            ResourceLocation blightId = ForgeRegistries.ITEMS.getKey(randomBlight);
-            if (blightId != null) {
-                GuMu.addBlight(stickwood, blightId.getPath());
+            List<String> ownedBlights = GuMu.getBlights(stickwood);
+            blightPool.removeIf(item -> {
+                ResourceLocation key = ForgeRegistries.ITEMS.getKey(item);
+                return key != null && GuMu.NON_STACKING_BLIGHTS.contains(key.getPath())
+                        && ownedBlights.contains(key.getPath());
+            });
+            if (!blightPool.isEmpty()) {
+                Item randomBlight = blightPool.get(player.getRandom().nextInt(blightPool.size()));
+                ResourceLocation blightId = ForgeRegistries.ITEMS.getKey(randomBlight);
+                if (blightId != null) {
+                    GuMu.addBlight(stickwood, blightId.getPath());
+                }
             }
 
             // Trophy overflow: when 99+ trophies stored, clear and give 99 trophy items
@@ -4849,6 +4983,91 @@ public class ModEventHandler {
                 cls = cls.getSuperclass();
             }
         } catch (Exception ignored) {}
+    }
+
+    // ============================================================
+    // === 荒疫: 恶灵附身 (Accursed) — every boss kill grants 2 random curses ===
+    // ============================================================
+
+    @SubscribeEvent
+    public static void onBossKillBlightAccursed(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        LivingEntity dead = event.getEntity();
+        if (!isBossEntity(dead)) return;
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+        if (GuMu.getBlightCountForPlayer(player, "accursed") <= 0) return;
+
+        var curseItem = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.GU_MU.get()));
+        if (curseItem.isEmpty()) return;
+        ItemStack stickwood = curseItem.get().stack();
+
+        // Pick 2 random curses; if already on GuMu, drop as item instead
+        List<Item> cursePool = new ArrayList<>(GuMu.CURSE_ITEMS);
+        List<String> existingCurses = GuMu.getCurses(stickwood);
+        for (int i = 0; i < 2; i++) {
+            Item randomCurse = cursePool.get(player.getRandom().nextInt(cursePool.size()));
+            ResourceLocation curseId = ForgeRegistries.ITEMS.getKey(randomCurse);
+            if (curseId == null) continue;
+            String id = curseId.getPath();
+            if (existingCurses.contains(id)) {
+                player.spawnAtLocation(new ItemStack(randomCurse));
+            } else {
+                GuMu.addCurse(stickwood, id);
+                existingCurses.add(id);
+            }
+        }
+    }
+
+    // ============================================================
+    // === Lava Rock: first boss kill → drop 2 relics (exclude ancient civilization), then deactivate ===
+    // ============================================================
+
+    /** Excluded relic IDs — Pell and Tezcatlipoca (先古之民) relics. */
+    private static final Set<String> EXCLUDED_RELIC_IDS = Set.of(
+            "pell_legion", "pell_growth", "pell_horn", "pell_tears",
+            "pell_flesh", "pell_blood", "pell_tooth", "pell_eye",
+            "pell_wing", "pell_claw",
+            "glass_eye", "radiant_pearl", "electric_shrymp",
+            "driftwood", "archaic_tooth", "sea_glass", "prismatic_gem"
+    );
+
+    private static List<Item> getRelicDrawPool() {
+        List<Item> pool = new ArrayList<>();
+        for (var entry : ForgeRegistries.ITEMS.getEntries()) {
+            ResourceLocation id = entry.getKey().location();
+            if (!id.getNamespace().equals(Sayuki.MOD_ID)) continue;
+            if (EXCLUDED_RELIC_IDS.contains(id.getPath())) continue;
+            pool.add(entry.getValue());
+        }
+        return pool;
+    }
+
+    @SubscribeEvent
+    public static void onBossKillLavaRock(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        LivingEntity dead = event.getEntity();
+        if (!isBossEntity(dead)) return;
+        if (!(event.getSource().getEntity() instanceof Player player)) return;
+
+        var lavaRock = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.LAVA_ROCK.get()));
+        if (lavaRock.isEmpty()) return;
+        if (player.getPersistentData().getBoolean(LavaRock.PKEY_USED)) return;
+        player.getPersistentData().putBoolean(LavaRock.PKEY_USED, true);
+
+        // Build relic draw pool (all curios:relic items minus excluded)
+        List<Item> pool = getRelicDrawPool();
+        if (pool.isEmpty()) return;
+
+        // Drop 2 random relics
+        for (int i = 0; i < 2; i++) {
+            Item relic = pool.get(player.getRandom().nextInt(pool.size()));
+            ItemEntity drop = new ItemEntity(player.level(),
+                    dead.getX(), dead.getY() + 0.5, dead.getZ(),
+                    new ItemStack(relic));
+            player.level().addFreshEntity(drop);
+        }
     }
 
     // ============================================================
@@ -5031,6 +5250,161 @@ public class ModEventHandler {
         }
     }
 
+    // === Winged Boots: triple jump (counter reset on ground) ===
+
+    @SubscribeEvent
+    public static void onPlayerTickWingedBoots(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (player.level().isClientSide()) return;
+
+        if (!player.onGround()) return;
+        var boots = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.WINGED_BOOTS.get()));
+        if (boots.isEmpty()) return;
+        player.getPersistentData().putInt(WingedBoots.PKEY_JUMPS, 0);
+    }
+
+    // === Spiked Gauntlets: +10% XP, take 1 damage per level-up ===
+
+    private static final String PKEY_SPIKED_GAUNTLETS_LEVEL = "SayukiSpikedGauntletsPrevLevel";
+
+    @SubscribeEvent
+    public static void onPlayerTickSpikedGauntlets(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (player.level().isClientSide()) return;
+
+        var gauntlets = CuriosApi.getCuriosInventory(player).resolve().flatMap(handler ->
+                handler.findFirstCurio(stack -> stack.getItem() == ModItems.SPIKED_GAUNTLETS.get()));
+        if (gauntlets.isEmpty()) return;
+
+        int prevLevel = player.getPersistentData().getInt(PKEY_SPIKED_GAUNTLETS_LEVEL);
+        int currLevel = player.experienceLevel;
+        if (currLevel > prevLevel && prevLevel > 0) {
+            player.hurt(player.damageSources().generic(), 1.0F);
+        }
+        player.getPersistentData().putInt(PKEY_SPIKED_GAUNTLETS_LEVEL, currLevel);
+    }
+
+    // === Silver Crucible: track inventory, auto-enchant unenchanted equipment, empty chests ===
+
+    private static final String PKEY_SILVER_CRUCIBLE_INV_HASH = "SayukiSilverCrucibleInvHash";
+
+    @SubscribeEvent
+    public static void onPlayerTickSilverCrucible(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (player.level().isClientSide()) return;
+        int activations = player.getPersistentData().getInt(SilverCrucible.PKEY_ACTIVATIONS);
+        if (activations <= 0) return;
+
+        // Build a hash of non-empty inventory slots
+        long newHash = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack s = player.getInventory().getItem(i);
+            if (!s.isEmpty()) {
+                newHash = newHash * 31 + Item.getId(s.getItem()) + s.getCount();
+            }
+        }
+        long oldHash = player.getPersistentData().getLong(PKEY_SILVER_CRUCIBLE_INV_HASH);
+        if (oldHash == 0) {
+            player.getPersistentData().putLong(PKEY_SILVER_CRUCIBLE_INV_HASH, newHash);
+            return;
+        }
+        if (newHash == oldHash) return;
+        player.getPersistentData().putLong(PKEY_SILVER_CRUCIBLE_INV_HASH, newHash);
+
+        // Find new unenchanted equippable item
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack s = player.getInventory().getItem(i);
+            if (s.isEmpty() || s.isEnchanted()) continue;
+            if (!s.isEnchantable() && !s.isDamageableItem()) continue;
+            var enchList = new ArrayList<>(ForgeRegistries.ENCHANTMENTS.getValues());
+            if (enchList.isEmpty()) continue;
+            Enchantment ench = enchList.get(player.getRandom().nextInt(enchList.size()));
+            int level = player.getRandom().nextIntBetweenInclusive(1, ench.getMaxLevel());
+            s.enchant(ench, level);
+
+            int remaining = activations - 1;
+            player.getPersistentData().putInt(SilverCrucible.PKEY_ACTIVATIONS, remaining);
+            if (remaining <= 0) {
+                player.getPersistentData().putBoolean(SilverCrucible.PKEY_USED_UP, true);
+            }
+            break;
+        }
+    }
+
+    // === Silver Crucible used up: next opened chest is empty ===
+
+    @SubscribeEvent
+    public static void onRightClickBlockSilverCrucibleEmpty(PlayerInteractEvent.RightClickBlock event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+        if (!player.getPersistentData().getBoolean(SilverCrucible.PKEY_USED_UP)) return;
+        BlockState state = player.level().getBlockState(event.getPos());
+        if (!(state.getBlock() instanceof ChestBlock
+                || state.getBlock() instanceof BarrelBlock
+                || state.getBlock() instanceof ShulkerBoxBlock)) return;
+
+        if (player.level().getBlockEntity(event.getPos()) instanceof RandomizableContainerBlockEntity chest) {
+            chest.setLootTable(null, 0);
+        }
+        player.getPersistentData().putBoolean(SilverCrucible.PKEY_USED_UP, false);
+        player.getPersistentData().remove(SilverCrucible.PKEY_ACTIVATIONS);
+    }
+
+    // === Pomander: crafted with any item → consume pomander, apply random enchantments ===
+
+    @SubscribeEvent
+    public static void onCraftedWithPomander(PlayerEvent.ItemCraftedEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+
+        ItemStack result = event.getCrafting();
+        // Check if pomander was used in crafting
+        boolean hasPomander = false;
+        ItemStack other = ItemStack.EMPTY;
+        for (int i = 0; i < event.getInventory().getContainerSize(); i++) {
+            ItemStack s = event.getInventory().getItem(i);
+            if (s.getItem() == ModItems.POMANDER.get()) {
+                hasPomander = true;
+            } else if (!s.isEmpty()) {
+                other = s.copy();
+            }
+        }
+        if (!hasPomander || other.isEmpty()) return;
+
+        // Apply random enchantment to result
+        var enchList = new ArrayList<>(ForgeRegistries.ENCHANTMENTS.getValues());
+        if (enchList.isEmpty()) return;
+        var ench = enchList.get(player.getRandom().nextInt(enchList.size()));
+        int level = player.getRandom().nextIntBetweenInclusive(1, ench.getMaxLevel());
+        result.enchant(ench, level);
+    }
+
+    // === 荒疫: 阴魂不散 (hauntings) — first N hits on enemy capped at 1 damage per stack ===
+
+    // === Hot Cocoa: maintain +4 food/saturation cap (vanilla caps at 20 → we raise to 24) ===
+
+    @SubscribeEvent
+    public static void onPlayerTickHotCocoa(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Player player = event.player;
+        if (player.level().isClientSide()) return;
+        if (!player.getPersistentData().getBoolean(HotCocoa.PKEY_EQUIPPED)) return;
+
+        FoodData food = player.getFoodData();
+        int prevFood = player.getPersistentData().getInt(HotCocoa.PKEY_PREV_FOOD);
+        int currFood = food.getFoodLevel();
+        player.getPersistentData().putInt(HotCocoa.PKEY_PREV_FOOD, currFood);
+
+        // Player ate something and vanilla capped at 20 → boost to 24
+        if (currFood > prevFood && currFood == 20) {
+            food.setFoodLevel(24);
+        }
+    }
+
     // === 荒疫: 阴魂不散 (hauntings) — first N hits on enemy capped at 1 damage per stack ===
 
     private static final String PKEY_BLIGHT_HAUNTINGS_HITS = "SayukiBlightHauntingsHits";
@@ -5059,6 +5433,47 @@ public class ModEventHandler {
         if (hits < maxHauntings) {
             event.setAmount(Math.min(event.getAmount(), 1.0F));
             target.getPersistentData().putInt(PKEY_BLIGHT_HAUNTINGS_HITS, hits + 1);
+        }
+    }
+
+    // ============================================================
+    // === Villager trades ===
+    // ============================================================
+
+    @SubscribeEvent
+    public static void onVillagerTrades(net.minecraftforge.event.village.VillagerTradesEvent event) {
+        if (event.getType() == net.minecraft.world.entity.npc.VillagerProfession.FISHERMAN) {
+            event.getTrades().get(1).add((trader, random) -> new net.minecraft.world.item.trading.MerchantOffer(
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK),
+                    new net.minecraft.world.item.ItemStack(ModItems.NUTRITIOUS_OYSTER.get()),
+                    1, 2, 0.05F
+            ));
+            event.getTrades().get(2).add((trader, random) -> new net.minecraft.world.item.trading.MerchantOffer(
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT),
+                    new net.minecraft.world.item.ItemStack(ModItems.BOOMING_CONCH.get()),
+                    1, 5, 0.05F
+            ));
+        }
+    }
+
+    // ============================================================
+    // === Lost Coffer: inject into abandoned mineshaft chest loot ===
+    // ============================================================
+
+    private static final ResourceLocation MINESHAFT_CHEST = ResourceLocation.fromNamespaceAndPath("minecraft", "chests/abandoned_mineshaft");
+
+    @SubscribeEvent
+    public static void onLootTableLoad(net.minecraftforge.event.LootTableLoadEvent event) {
+        if (event.getName().equals(MINESHAFT_CHEST)) {
+            event.getTable().addPool(
+                    net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                            .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(ModItems.LOST_COFFER.get())
+                                    .setWeight(1)
+                                    .setQuality(0))
+                            .setRolls(net.minecraft.world.level.storage.loot.providers.number.ConstantValue.exactly(1))
+                            .setBonusRolls(net.minecraft.world.level.storage.loot.providers.number.ConstantValue.exactly(0))
+                            .build()
+            );
         }
     }
 }

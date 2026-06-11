@@ -11,6 +11,6 @@ import net.minecraft.world.effect.MobEffectCategory;
 public class SilenceEffect extends MobEffect {
 
     public SilenceEffect() {
-        super(MobEffectCategory.NEUTRAL, 0xDDDDCC);
+        super(MobEffectCategory.HARMFUL, 0xDDDDCC);
     }
 }

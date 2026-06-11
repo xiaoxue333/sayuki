@@ -1,6 +1,6 @@
 # Sayuki Mod 开发经验笔记
 
-> 上次更新: 2026-06-10 · v0.3.0 发布：史莱姆提前分裂、大量遗物实现（美味饼干/金珍珠/诅咒珍珠/炼金箱/营养牡蛎/石炉加湿器/增生组织/精准剪刀/松动羊毛剪）、荒疫嘴套重做(15%HP增长)、荒疫tooltip图标系统、进阶系统重组
+> 上次更新: 2026-06-11 · refmap 修复 + build.gradle annotationProcessor；全部 @Shadow/@Accessor 已移除
 
 ---
 
@@ -624,4 +624,411 @@ if (mob.getPersistentData().contains(PKEY_PACIFIED_UNTIL)) return;
 意味着每个怪物**一生只被安抚一次**，即使之后再次被该怪物攻击也不会重新触发。
 
 > 纠正了此前流程描述中"若再次攻击则重新安抚"的错误认知。
+
+---
+
+## 18. 2026-06-11 — Mixin 架构: 非 Mixin 类引用 Mixin 包的编译错误修复
+
+### 18.1 问题背景
+
+`ModEventHandler`（`handler` 包，非 Mixin 类）中直接使用了完全限定名引用 `mixin` 包中的
+`com.xiaoxue.sayuki.mixin.DoomTradeTax`（`enable/disable` 方法），导致编译错误。
+
+**根因**：Mixin 类在编译后被 Mixin 框架应用到目标类，它们本身不应被普通代码直接依赖。
+虽然本项目中 `DoomTradeTax` 实际是普通类（无 `@Mixin` 注解），但它位于 `mixin` 包中，
+非 Mixin 代码不应引用 `mixin` 包内的任何类。
+
+### 18.2 涉及文件
+
+| 文件 | 包 | 角色 |
+|------|-----|------|
+| `DoomTradeTax.java` | `mixin` | ThreadLocal 标志的原始持有者 |
+| `MerchantOfferMixin.java` | `mixin` | 真正的 Mixin，注入 `MerchantOffer.getCostA/B` |
+| `ModEventHandler.java` | `handler` | 事件处理器，open/close 容器时设/清标志 |
+
+### 18.3 修复方案（方案一：逻辑抽离到普通类）
+
+#### 新建 `DoomTradeTaxHandler`（handler 包，非 mixin）
+
+```java
+// handler/DoomTradeTaxHandler.java
+public final class DoomTradeTaxHandler {
+    private DoomTradeTaxHandler() {}
+    private static final ThreadLocal<Boolean> ENABLED = ThreadLocal.withInitial(() -> false);
+
+    public static void enable() { ENABLED.set(true); }
+    public static void disable() { ENABLED.remove(); }
+    public static boolean isEnabled() { return Boolean.TRUE.equals(ENABLED.get()); }
+}
+```
+
+#### 重构 `DoomTradeTax`（mixin 包，纯转发）
+
+将 `ThreadLocal` 和核心逻辑移除，改为转发到 `DoomTradeTaxHandler`：
+
+```java
+// mixin/DoomTradeTax.java — 变为兼容转发层
+public final class DoomTradeTax {
+    private DoomTradeTax() {}
+    public static void enable()  { DoomTradeTaxHandler.enable(); }
+    public static void disable() { DoomTradeTaxHandler.disable(); }
+    public static boolean isEnabled() { return DoomTradeTaxHandler.isEnabled(); }
+}
+```
+
+#### 更新所有调用方
+
+| 文件 | 改前 | 改后 |
+|------|------|------|
+| `ModEventHandler.java` | `com.xiaoxue.sayuki.mixin.DoomTradeTax.enable()` | `DoomTradeTaxHandler.enable()` |
+| `ModEventHandler.java` | `com.xiaoxue.sayuki.mixin.DoomTradeTax.disable()` | `DoomTradeTaxHandler.disable()` |
+| `MerchantOfferMixin.java` | `DoomTradeTax.isEnabled()` | `DoomTradeTaxHandler.isEnabled()` |
+
+> `ModEventHandler` 与 `DoomTradeTaxHandler` 同包，直接用简单名即可。
+
+### 18.4 最终架构
+
+```
+ModEventHandler (handler)  ──调用──▶  DoomTradeTaxHandler (handler)  ◀──调用── MerchantOfferMixin (mixin)
+                                            ▲
+DoomTradeTax (mixin)      ──转发──────────┘
+```
+
+- 核心逻辑在 `handler` 包 → 非 Mixin 代码可安全引用
+- `DoomTradeTax` 保留为转发兼容层 → ~~后续确认无其他引用后可删除~~ **已于 2026-06-11 删除**（见 18.6）
+- 所有引用干净：无 `mixin` 包外的代码引用 `mixin` 包内的类
+
+### 18.5 开发规范
+
+1. **Mixin 类仅用于混入目标类**，不要包含被外部调用的 API 方法
+2. **如需共享功能**，将其放在独立的、无 `@Mixin` 注解的普通类中（如 `handler` 包）
+3. **配置 mixin refmap 后**，不要在其他模组或同模组的非 Mixin 代码中 import `mixin` 包内的类
+4. **IDE 配置检查**：可配置检查规则禁止 `mixin` 包外的代码引用 `mixin` 包内的类
+
+### 18.6 代码库全面巡检与冗余清理 (2026-06-11)
+
+遍历 mixin 包全部 8 个类，发现并修复了 3 个额外问题：
+
+| # | 问题 | 文件 | 修复 |
+|---|------|------|------|
+| 1 | `ModEventHandler` import `FoodDataAccessor`（非 mixin 引用 mixin 包） | `ModEventHandler.java` | 移除 import，改用反射 `Field.getFloat/setFloat` 访问 `FoodData.saturationLevel` |
+| 2 | `LootTableMixin` 4 个 `private static` 字段缺 `@Unique` | `LootTableMixin.java` | 补 `@Unique` |
+| 3 | `ItemInHandRendererMixin` `ANIM_DURATION` 缺 `@Unique` | `ItemInHandRendererMixin.java` | 补 `@Unique` |
+| 4 | `DoomTradeTax.java` 冗余兼容层 | `DoomTradeTax.java` | **删除**（零代码引用、零翻译键、功能已由 `DoomTradeTaxHandler` 承接） |
+
+> `DoomTradeTax` 演化史：v0.2.1 MerchantOfferMixin public static 违规 → v0.2.2 抽为独立类（放 mixin 包）→ 2026-06-11 因 ModEventHandler 跨包引用而重构为 DoomTradeTaxHandler → 同日确认无引用后删除。
+
+### 18.7 FoodDataAccessor — @Shadow 方案失败与回退 (2026-06-11)
+
+初次修复尝试将 `@Accessor` 改为 `@Shadow` + API 接口，但生产环境仍崩溃。
+**根因：`sayuki.refmap.json` 未生成。**
+
+`@Shadow` 依赖 refmap 在混淆环境下映射字段名（Moajng → SRG）。
+没有 refmap → 所有 `@Shadow` 字段找不到 → `InvalidMixinException`。
+
+| 阶段 | 尝试 | 结果 |
+|------|------|------|
+| 问题发现 | 反射 `Field.getDeclaredField("saturationLevel")` 生产环境崩溃 | ❌ NoSuchFieldException |
+| 尝试 1 | `@Accessor` → `@Shadow` + `implements IFoodDataAccessor` | ❌ No refMap loaded |
+| 尝试 2 | 排查 refmap：`build.gradle` 缺 `annotationProcessor` | 找到根因 |
+| 最终方案 | 删除所有 `@Shadow`/`@Accessor` Mixin，反射保留 try-catch 兜底，HotCocoa 改用原版 `food.setFoodLevel(24)` | ✅ 稳定 |
+
+删除的文件（4 Mixin + 4 API 接口）：
+`FoodDataAccessor`, `MerchantMenuAccessor`, `PlayerAccessor`, `MobEffectInstanceAccessor` +
+`IFoodDataAccessor`, `IMerchantMenuAccessor`, `IPlayerAccessor`, `IMobEffectInstanceAccessor`
+
+> **教训**：`@Shadow` 不是万能的。生产环境必须有 refmap 才是可靠方案。
+> 如果没有 refmap，反射 `try-catch` 优于 `@Shadow`（至少不会让整个模组加载失败）。
+> 其他 3 处反射（trader / attackStrengthTicker / duration）保留了 try-catch 兜底，生产环境静默降级而非崩溃。
+
+---
+
+## 20. refmap 生成修复与经验总结 (2026-06-11)
+
+### 20.1 根因
+
+`build.gradle` 缺少 Mixin annotation processor：
+
+```gradle
+dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+```
+
+没有这条 → `sayuki.refmap.json` 不生成 → 所有 `@Shadow`/`@Accessor` 在生产环境找不到混淆字段名 → `InvalidMixinException` → 整个模组加载失败。
+
+### 20.2 修复
+
+| 步骤 | 操作 |
+|------|------|
+| `build.gradle` | 添加 `annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'` |
+| `./gradlew clean build` | refmap 生成 → JAR 内确认 `sayuki.refmap.json` 存在 (3,958 bytes) |
+
+### 20.3 @Inject vs @Shadow 可靠性对比
+
+| 机制 | 依赖 refmap | 生产环境风险 |
+|------|------------|-------------|
+| `@Inject` | 否（基于方法签名） | 低 |
+| `@Shadow` | **是** | 无 refmap → 模组无法加载 |
+| `@Accessor` | **是** | 无 refmap → 模组无法加载 |
+| 反射 `getDeclaredField("name")` | 否 | 方法名固定；**字段名会变**（dev=Moajng / prod=SRG），try-catch 静默降级 |
+
+### 20.4 最终稳定配置
+
+**mixins.json（6 个纯 @Inject）：**
+```
+NaturalSpawnerMixin, LootTableMixin, MerchantOfferMixin,
+PlayerFoodExhaustionMixin, ItemInHandRendererMixin, LightEngineMixin
+```
+
+**ModEventHandler 4 处反射（try-catch 兜底）：**
+
+| 字段 | 用途 | 生产行为 |
+|------|------|---------|
+| `MerchantMenu.trader` | GoldenSeal / LordsParasol | 无 refmap → 静默降级 |
+| `Player.attackStrengthTicker` | BrilliantScarf | 无 refmap → 静默降级 |
+| `MobEffectInstance.duration` | 进阶4 药水时间 -33% | 无 refmap → 静默降级 |
+| HotCocoa 饱和度 | 已移除（改用 `food.setFoodLevel(24)`，原版 public API） | ✅ 始终正常 |
+
+### 20.5 架构原则结算
+
+```
+原则 1: @Inject 优先 — 不依赖 refmap，生产环境可靠
+原则 2: @Shadow/@Accessor 需 refmap — 用之前先确认 build.gradle annotationProcessor
+原则 3: 反射字段名不可靠 — 只对方法名可靠，字段名会被混淆
+原则 4: try-catch 优于 @Shadow — 无 refmap 时静默降级优于整个模组崩溃
+原则 5: 原版 public API 最优先 — 如 food.getSaturationLevel()
+原则 6: 非 Mixin 代码绝不 import mixin 包 — 通过独立 handler/helper 类隔离
+```
+
+### 20.6 本轮全部修复汇总
+
+| 日期 | 问题 | 修复 |
+|------|------|------|
+| 06-11 | `ModEventHandler` 直接引用 `mixin.DoomTradeTax` | 创建 `handler.DoomTradeTaxHandler`，删除 `DoomTradeTax` |
+| 06-11 | `ModEventHandler` import `mixin.FoodDataAccessor` | 反射 → 原版 API / try-catch |
+| 06-11 | `LootTableMixin` / `ItemInHandRendererMixin` 缺 `@Unique` | 补注解 |
+| 06-11 | `FoodDataAccessor` + 3 个新建 Accessor 因 refmap 缺失崩溃 | 全部删除，反射保留 try-catch |
+| 06-11 | refmap 不生成 | `build.gradle` 加 `annotationProcessor`，refmap 现可正常生成 |
+| 06-11 | 整合包空足部栏位缺贴图 + Curios 槽位图标冗余 | 新建 `entities/feet_slots.json`，槽位图标改用 `curios:` 内置（仅保留 relic 和 curse_of_the_tower 自定义贴图），删除 13 张冗余贴图 |
+
+---
+
+## 19. v0.3.0 发布记录 (2026-06-10)
+
+> 来源：`变更笔记_2026-06-10.md`（已合并至此文件，原文件可删除）
+
+### 19.1 新增遗物效果实现（10个）
+
+| 物品 | 效果 |
+|------|------|
+| **美味饼干×5**（铁甲战士/静默猎手/故障机器人/死灵法师/观者） | 可食用，恢复 10 饱食度 + 10 饱和度 |
+| **金珍珠** | 右键消耗 → 获得 150 金锭 |
+| **诅咒珍珠** | 右键消耗 → 获得 333 绿宝石 |
+| **炼金宝匣** | 佩戴时遗物栏位 +4；佩戴时立即获得 4 种随机正面药水效果 30s |
+| **营养牡蛎** | 右键食用，恢复 11 饱食度 + 永久 +11 最大生命值 |
+| **石炉加湿器** | 佩戴时每次睡觉跳过夜晚后，永久 +5 最大生命值 |
+| **佩尔的增生组织** | 右键消耗，第 n 次使用永久获得 2^(n-1) 个遗物栏位（1→2→4→8...），使用 permanentSlotModifiers |
+| **精准剪刀** | 右键消耗，优先移除装备上的绑定诅咒附魔；若无则移除棍木中一个可移除的诅咒（LIFO，跳过不可移除） |
+| **松动羊毛剪** | 右键消耗，扣 16 HP（最低留 1），移除棍木中两个诅咒 |
+
+### 19.2 荒疫系统
+
+| 变更 | 详情 |
+|------|------|
+| **嘴套 (muzzle) 重做** | 治疗减半保留；原"最大HP禁止增长" → "最大HP增长仅生效 15%"（可降低），使用 SayukiBlightMuzzleBase 跟踪 |
+| **荒疫 tooltip 图标系统** | `BlightIconTooltipData` → `BlightClientTooltipComponent`，棍木 tooltip 显示荒疫图标 + 计数，13 种荒疫均配图标映射 |
+| **待定义荒疫**（1个） | twist 仍待定义；trophy 仅实现 ≥99 换物品 |
+
+### 19.3 进阶系统重组
+
+| 变更 | 详情 |
+|------|------|
+| 移除进阶 14/16/17 | 14(永久-1HP)、16(怪物刷新率+10%)、17(每3攻受随机伤害) 移除 |
+| 合并 | 进阶 15(怪物移速+10%) → 进阶 12；进阶 18(Boss+20%) → 进阶 11 |
+| Boss 阈值调整 | 荒疫推进所需 Boss 击杀: 4→10→6 |
+| 无效果进阶 | 空位进阶仅保留每级 +5% 效果 |
+
+### 19.4 怪物AI
+
+| 变更 | 详情 |
+|------|------|
+| **史莱姆提前分裂** | 大/中史莱姆 HP 首次 ≤50% 时分裂为 2~4 个子史莱姆，子史莱姆继承分配后的血量。一击秒杀仍走原版死亡分裂 |
+
+### 19.5 增加遗物栏位的遗物（共7个）
+
+| 物品 | 栏位 | 类型 |
+|------|------|------|
+| 召唤铃铛 | +3 | transient |
+| 忍者卷轴 | +3 | transient |
+| 符文电容器 | +3 | transient |
+| 封存之雾 | +3 | transient |
+| 能量电池 | +2 | transient |
+| 橙子面团 | +2 | transient |
+| 炼金宝匣 | +4 | transient |
+| 佩尔的增生组织 | 2^(n-1) | permanent |
+
+### 19.6 贴图优化
+
+- 全部 64x → 32x、32x → 16x、72x → 32x、128x → 96x、异常尺寸(18x/1x) → 16x
+
+### 19.7 进阶系统调整
+
+| 进阶 | 变更 | 详情 |
+|------|------|------|
+| 进阶1 | 效果重做 | 从"所有怪物刷新率+60%" → "精英怪入场时60%概率生成复制体"，移至 `EntityJoinLevelEvent` |
+| 进阶5/13 | 效果对调 | 进阶5：强制 ascenders_bane → 改为睡觉回满 -5HP；进阶13：睡觉回满 -5HP → 改为强制 ascenders_bane + 睡觉回90% |
+| 进阶14 | 条件收窄 | 永久-1最大生命改为仅击杀精英怪生效，移除 Slime/MagmaCube/Enemy 判定 |
+
+### 19.8 荒疫系统补充
+
+| 变更 | 详情 |
+|------|------|
+| 触发条件 19→10 | 进阶≥10即可激活荒疫 |
+| 时光迷宫效果重做 | 每15秒移动键方向颠倒3秒（server端反向teleport）；时钟/指南针渲染失效待客户端Mixin |
+| 先古强化 (ancient) | 3个切入点：EntityJoin→+10护甲×N，LivingTick→每秒恢复1×N，MobEffect.Added→拦截N次负面效果 |
+| 荒疫tooltip补充 | ancient/maze/muzzle/shield/spear 已定义效果描述 |
+| 物品名修正 | zh_cn.json 中 accursed↔hauntings、ancient↔spear 错位修复 |
+
+### 19.9 诅咒系统
+
+| 变更 | 详情 |
+|------|------|
+| 不可移除诅咒集合 `UNREMOVABLE_CURSES` | 4种：ascenders_bane, bad_luck, enthralled, folly（+ 原有 curse_of_the_bell），`removeCurse()`/`removeLastCurse()`/`syncExternalCurseRemoval()` 均跳过 |
+| 疑虑效果重做 | 受伤施加本模组 `WeakPower` → 攻击后移除（替代 -50% 伤害） |
+| 笨拙新增移除条件 | 击杀精英怪后移除笨拙诅咒 |
+| 铃铛的诅咒获取 | 首次佩戴召唤铃铛时掉落一个 curse_of_the_bell 物品 |
+| 不允许重复 | `addCurse()` 去重：已存在的诅咒不再添加 |
+| tooltip布局 | 横向排列，每5个诅咒一行，逗号分隔 |
+
+### 19.10 判定白名单
+
+| 变更 | 详情 |
+|------|------|
+| Config 中文化 | Boss白名单 + 精英白名单注释全部中文化，硬编码模组/实体名标注 |
+| 精英默认值 | minecraft:creeper(powered), vex, ravager, enderman + cataclysm 6种小boss |
+| 精英判定补充 | `isEliteEntity()` 新增 Creeper isPowered() 特殊检测，非闪电苦力怕不视为精英 |
+
+### 19.11 Boss判定
+
+| 模组 | 实体 |
+|------|------|
+| 原版 (4种永久判定) | 循声守卫(warden), 凋灵(wither), 末影龙(ender_dragon), 远古守卫者(elder_guardian) |
+| 硬编码 (12个模组) | goety, goety_revelation, cataclysm, meetyourfight, bosses_of_mass_destruction, eeeabsmobs, soulslike_weaponry, alexsmobs, alexscaves, irons_spellbooks, fantasy_ending |
+
+### 19.12 Bug 修复
+
+| 版本 | 问题 | 修复 |
+|------|------|------|
+| 0.2.1 | `MerchantOfferMixin` 中 `DOOM_TRADE_TAX` 为 `public static` 非 `private`，Mixin 注入时抛出 `InvalidMixinException` | 改为 `@Unique private static final` |
+| 0.2.2 | 同上 Mixin 中 `sayuki$setTradeTax`/`sayuki$clearTradeTax` 为 `public static`，同样违反 Mixin 规范 | 创建独立工具类 `DoomTradeTax`，ThreadLocal + enable/disable/isEnabled 移出 Mixin，`MerchantOfferMixin` 仅保留 `@Inject` 回调 |
+
+### 19.13 杂项
+
+- 玩家首次佩戴棍木弹出聊天信息："麻溜点发我五块⁄(⁄ ⁄⁄ω⁄ ⁄ ⁄)⁄"
+
+### 19.14 当前诅咒完整列表（18种）
+
+| # | ID | 中文名 | 效果 | 特殊机制 |
+|---|-----|--------|------|---------|
+| 1 | ascenders_bane | 进阶之灾 | 目标攻速-10%/怪物 | 进阶13强制，**不可移除** |
+| 2 | bad_luck | 霉运 | 每5攻受13魔法伤害 | **不可移除** |
+| 3 | clumsy | 笨拙 | 移速-10% | 击杀精英移除/受击重获 |
+| 4 | curse_of_the_bell | 铃铛的诅咒 | 攻速-10% | 佩戴召唤铃铛掉落，**不可移除** |
+| 5 | debt | 债务 | 攻击消耗宝石/金/钻 | 可叠加 |
+| 6 | decay | 腐朽 | 每5攻受2魔法伤害 | 可叠加 |
+| 7 | doubt | 疑虑 | 受伤→Weak Power/攻击→移除 | 可叠加 |
+| 8 | enthralled | 执迷 | 伤害-20%/+2饱食消耗 | **不可移除** |
+| 9 | folly | 愚行 | 对未攻击过敌人首伤-10 | **不可移除** |
+| 10 | greed | 贪婪 | 攻速-10%/伤害-1 | 永久不可移除 |
+| 11 | guilty | 愧疚 | 攻速-10% | 击杀5 Boss移除 |
+| 12 | injury | 受伤 | 攻速-10% | 可叠加 |
+| 13 | normality | 凡庸 | 每2攻下1伤归零 | 不可叠加 |
+| 14 | poor_sleep | 睡眠不佳 | 攻速-10% | 可叠加 |
+| 15 | regret | 悔恨 | 每5攻受快捷栏物品数伤害 | 可叠加 |
+| 16 | shame | 羞耻 | 格挡-25%/护甲-25% | 可叠加 |
+| 17 | spore_mind | 孢子心智 | 伤害-1/每10攻1次 | 可叠加 |
+| 18 | writhe | 扭曲 | 伤害-1/每5攻切换 | 可叠加 |
+
+### 19.15 当前荒疫列表（13种）
+
+| # | ID | 中文名 | 状态 |
+|---|-----|--------|------|
+| 1 | accursed | 恶灵附身 | 已实现（击败Boss获得2张随机诅咒） |
+| 2 | ancient | 先古强化 | 已实现 |
+| 3 | durian | 疫后榴莲 | 已实现 |
+| 4 | hauntings | 阴魂不散 | 已实现 |
+| 5 | maze | 时光迷宫 | 已实现 |
+| 6 | mimic | 遍地宝箱怪 | 已实现（开箱时随机生成 HP≥100 的非Boss敌对怪物） |
+| 7 | muzzle | 嘴套 | 已实现 |
+| 8 | scatter | 胡思乱想 | 已实现（弹射物首次弹射1%弹射自己，不叠加） |
+| 9 | shield | 荒疫之盾 | 已实现 |
+| 10 | spear | 荒疫之矛 | 已实现 |
+| 11 | trophy | 可怖奖杯 | 部分（≥99换物品，无战斗效果） |
+| 12 | twist | 心智扭曲 | 待定义 |
+| 13 | void | 虚无结晶 | 已实现（每次行动饥饿消耗+N，可叠加） |
+
+### 19.16 2026-06-10 新增遗物实现（16个）
+
+| # | 物品 | 效果 |
+|---|------|------|
+| 1 | 赐福鹿角 (blessed_antler) | 经验+100%→调整为 +10% |
+| 2 | 带刺手甲 (spiked_gauntlets) | 经验+10%，每次升级受1点伤害 |
+| 3 | 战锤 (war_hammer) | 佩戴时快捷栏已附魔武器附魔+1（一次性） |
+| 4 | 沙堡 (sand_castle) | 佩戴时6装备栏附魔+1（一次性） |
+| 5 | 白银熔炉 (silver_crucible) | 3件无附魔装备获得随机附魔→下一个宝箱变空 |
+| 6 | 橙型香盒 (pomander) | 与物品合成消耗自身，给产物随机附魔 |
+| 7 | 涅奥的护符 (neows_talisman) | 佩戴时+3攻击+3护甲 |
+| 8 | 羽翼之靴 (winged_boots) | 三段跳（足部饰品栏） |
+| 9 | 进阶5追加 | 最多持有2种正面药水效果，超出时移除最早获得的 |
+| 10 | 药品皮套 (phial_holster) | +1遗物栏位，可持有药水+1 |
+| 11 | 炼金宝匣追加 | 追加可持有药水+4 |
+| 12 | 轰鸣海螺 (booming_conch) | 弹射物命中精英敌人时弹射次数+2 |
+| 13 | 卷轴箱 (scroll_boxes) | 右键消耗，获得3张随机稀有度的ISS法术卷轴 |
+| 14 | 熔岩石 (lava_rock) | 佩戴后击杀第一个boss掉落2遗物（先古之民除外），触发后失效 |
+| 15 | 遗物抽取池排除先古之民 | Pell(10) + Tezcatlipoca(7) 共17件遗物排除 |
+| 16 | 失物盒 (lost_coffer) | 右键消耗→随机药水效果+2铁锭，矿井宝箱概率获取 |
+
+### 19.17 棍木 tooltip
+
+棍木添加 Shift 查看进阶效果：按住 Shift 后显示进阶 1~13 的全部效果描述。
+
+### 19.18 新增 Curios 槽位
+
+| 槽位 | size | 说明 |
+|------|------|------|
+| feet | 1 | 足部饰品栏，羽翼之靴移入此槽 |
+
+### 19.19 新增进度系统框架 (Advancements)
+
+| 文件 | 说明 |
+|------|------|
+| `advancement/SayukiCriterionTrigger.java` | 通用自定义触发器：继承 SimpleCriterionTrigger，支持 item 条件匹配 |
+| `advancement/ModAdvancements.java` | 触发器注册中心：5个预定义触发器，含注册方法和便捷触发方法 |
+
+**预定义触发器：**
+
+| 触发器 ID | 用途 | 参数 |
+|-----------|------|------|
+| `sayuki:relic_equipped` | 玩家佩戴遗物时触发 | `item`（可选） |
+| `sayuki:relic_unequipped` | 玩家卸下遗物时触发 | `item`（可选） |
+| `sayuki:boss_killed` | 玩家击杀boss时触发 | `item`（持有的武器，可选） |
+| `sayuki:boss_killed_with` | 同 boss_killed | 同上 |
+| `sayuki:generic_event` | 任意自定义事件 | `item`（可选） |
+
+**使用方式：**
+1. 在事件处理器中调用 `ModAdvancements.triggerBossKilled(sp, item)` 等便捷方法
+2. 或在任意位置通过 `ModAdvancements.GENERIC_EVENT.trigger(sp, item)` 触发
+3. JSON 文件置于 `data/sayuki/advancements/` 下，使用 `"trigger": "sayuki:xxx"` 引用
+
+在 `Sayuki.commonSetup` 中通过 `CriteriaTriggers.register()` 注册所有触发器。
+
+### 19.20 村民交易 (Villager Trades)
+
+| 职业 | 等级 | 输入 | 输出 | 最大次数 |
+|------|------|------|------|----------|
+| 渔民 | 1 (Novice) | 1×木棍 | 1×营养牡蛎 | 1 |
+| 渔民 | 2 (Apprentice) | 1×泥土 | 1×轰鸣海螺 | 1 |
+
+> 所有遗物交易均设为 maxUses=1，即每位村民仅可交易一次。
 

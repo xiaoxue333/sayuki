@@ -10,6 +10,6 @@ import net.minecraft.world.effect.MobEffectCategory;
 public class CombatEffect extends MobEffect {
 
     public CombatEffect() {
-        super(MobEffectCategory.NEUTRAL, 0xFFDDAA);
+        super(MobEffectCategory.HARMFUL, 0xFFDDAA);
     }
 }

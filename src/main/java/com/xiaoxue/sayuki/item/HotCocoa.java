@@ -10,6 +10,8 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import java.util.List;
 
 public class HotCocoa extends Item implements ICurioItem {
+    public static final String PKEY_EQUIPPED = "SayukiHotCocoaEquipped";
+    public static final String PKEY_PREV_FOOD = "SayukiHotCocoaPrevFood";
     public HotCocoa(Properties properties) { super(properties); }
 
     @Override

@@ -18,6 +18,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
+@SuppressWarnings({ "unchecked", "rawtypes", "removal", "deprecation" })
 public class ModCreativeModeTab {
     public final static DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Sayuki.MOD_ID);
@@ -240,6 +241,7 @@ public class ModCreativeModeTab {
                     .icon(() -> getCurseTabIcon())
                     .title(Component.translatable("itemGroup.sayuki_curse_tab"))
                     .displayItems((pParameters, pOutput) -> {
+                    
                         pOutput.accept(ModItems.ASCENDERS_BANE.get());
                         pOutput.accept(ModItems.BAD_LUCK.get());
                         pOutput.accept(ModItems.CLUMSY.get());
@@ -273,6 +275,165 @@ public class ModCreativeModeTab {
                         pOutput.accept(ModItems.TROPHY.get());
                         pOutput.accept(ModItems.TWIST.get());
                         pOutput.accept(ModItems.VOID.get());
+                    }).build());
+
+    // ===== Tab 5: 咲雪随想：通用遗物 =====
+
+    public final static RegistryObject<CreativeModeTab> SAYUKI_RELIC_TAB =
+            CREATIVE_MODE_TABS.register("sayuki_relic_tab", () -> CreativeModeTab.builder()
+                    .icon(() -> new ItemStack(ModItems.AKABEKO.get()))
+                    .title(Component.translatable("itemGroup.sayuki_relic_tab"))
+                    .displayItems((pParameters, pOutput) -> {
+pOutput.accept(ModItems.FAKEANCHOR.get());
+                    pOutput.accept(ModItems.FAKEBLOODVIAL.get());
+                    pOutput.accept(ModItems.FAKEHAPPYFLOWER.get());
+                    pOutput.accept(ModItems.FAKELEESWAFFLE.get());
+                    pOutput.accept(ModItems.FAKEMANGO.get());
+                    pOutput.accept(ModItems.FAKEMERCHANTSRUG.get());
+                    pOutput.accept(ModItems.FAKEORICHALCUM.get());
+                    pOutput.accept(ModItems.FAKESNECKOEYE.get());
+                    pOutput.accept(ModItems.FAKESTRIKEDUMMY.get());
+                    pOutput.accept(ModItems.FAKEVENERABLETEASET.get());
+                    pOutput.accept(ModItems.AKABEKO.get());
+                    pOutput.accept(ModItems.AMETHYSTAUBERGINE.get());
+                    pOutput.accept(ModItems.ANCHOR.get());
+                    pOutput.accept(ModItems.ARTOFWAR.get());
+                    pOutput.accept(ModItems.BAGOFMARBLES.get());
+                    pOutput.accept(ModItems.BAGOFPREPARATION.get());
+                    pOutput.accept(ModItems.BEATINGREMNANT.get());
+                    pOutput.accept(ModItems.BELLOWS.get());
+                    pOutput.accept(ModItems.BELTBUCKLE.get());
+                    pOutput.accept(ModItems.BIGMUSHROOM.get());
+                    pOutput.accept(ModItems.BINGBONG.get());
+                    pOutput.accept(ModItems.BLOODVIAL.get());
+                    pOutput.accept(ModItems.BONETEA.get());
+                    pOutput.accept(ModItems.BOOKOFFIVERINGS.get());
+                    pOutput.accept(ModItems.BOWLERHAT.get());
+                    pOutput.accept(ModItems.BREAD.get());
+                    pOutput.accept(ModItems.BRONZESCALES.get());
+                    pOutput.accept(ModItems.BURNINGSTICKS.get());
+                    pOutput.accept(ModItems.BYRDPIP.get());
+                    pOutput.accept(ModItems.CANDELABRA.get());
+                    pOutput.accept(ModItems.CAPTAINSWHEEL.get());
+                    pOutput.accept(ModItems.CAULDRON.get());
+                    pOutput.accept(ModItems.CENTENNIALPUZZLE.get());
+                    pOutput.accept(ModItems.CHANDELIER.get());
+                    pOutput.accept(ModItems.CHEMICALX.get());
+                    pOutput.accept(ModItems.CHOSENCHEESE.get());
+                    pOutput.accept(ModItems.CLOAKCLASP.get());
+                    pOutput.accept(ModItems.DARKSTONEPERIAPT.get());
+                    pOutput.accept(ModItems.DAUGHTEROFTHEWIND.get());
+                    pOutput.accept(ModItems.DINGYRUG.get());
+                    pOutput.accept(ModItems.DOLLYSMIRROR.get());
+                    pOutput.accept(ModItems.DRAGONFRUIT.get());
+                    pOutput.accept(ModItems.DREAMCATCHER.get());
+                    pOutput.accept(ModItems.EMBERTEA.get());
+                    pOutput.accept(ModItems.ETERNALFEATHER.get());
+                    pOutput.accept(ModItems.FESTIVEPOPPER.get());
+                    pOutput.accept(ModItems.FORGOTTENSOUL.get());
+                    pOutput.accept(ModItems.FRAGRANTMUSHROOM.get());
+                    pOutput.accept(ModItems.FRESNELLENS.get());
+                    pOutput.accept(ModItems.FROZENEGG.get());
+                    pOutput.accept(ModItems.GAMBLINGCHIP.get());
+                    pOutput.accept(ModItems.GAMEPIECE.get());
+                    pOutput.accept(ModItems.GHOSTSEED.get());
+                    pOutput.accept(ModItems.GIRYA.get());
+                    pOutput.accept(ModItems.GNARLEDHAMMER.get());
+                    pOutput.accept(ModItems.GORGET.get());
+                    pOutput.accept(ModItems.GREMLINHORN.get());
+                    pOutput.accept(ModItems.HANDDRILL.get());
+                    pOutput.accept(ModItems.HAPPYFLOWER.get());
+                    pOutput.accept(ModItems.HISTORYCOURSE.get());
+                    pOutput.accept(ModItems.HORNCLEAT.get());
+                    pOutput.accept(ModItems.ICECREAM.get());
+                    pOutput.accept(ModItems.INTIMIDATINGHELMET.get());
+                    pOutput.accept(ModItems.JOSSPAPER.get());
+                    pOutput.accept(ModItems.JUZUBRACELET.get());
+                    pOutput.accept(ModItems.KIFUDA.get());
+                    pOutput.accept(ModItems.KUNAI.get());
+                    pOutput.accept(ModItems.KUSARIGAMA.get());
+                    pOutput.accept(ModItems.LANTERN.get());
+                    pOutput.accept(ModItems.LASTINGCANDY.get());
+                    pOutput.accept(ModItems.LAVALAMP.get());
+                    pOutput.accept(ModItems.LEESWAFFLE.get());
+                    pOutput.accept(ModItems.LETTEROPENER.get());
+                    pOutput.accept(ModItems.LIZARDTAIL.get());
+                    pOutput.accept(ModItems.LOSTWISP.get());
+                    pOutput.accept(ModItems.LUCKYFYSH.get());
+                    pOutput.accept(ModItems.MANGO.get());
+                    pOutput.accept(ModItems.MAWBANK.get());
+                    pOutput.accept(ModItems.MEALTICKET.get());
+                    pOutput.accept(ModItems.MEATONTHEBONE.get());
+                    pOutput.accept(ModItems.MEMBERSHIPCARD.get());
+                    pOutput.accept(ModItems.MERCURYHOURGLASS.get());
+                    pOutput.accept(ModItems.MINIATURECANNON.get());
+                    pOutput.accept(ModItems.MINIATURETENT.get());
+                    pOutput.accept(ModItems.MOLTENEGG.get());
+                    pOutput.accept(ModItems.MRSTRUGGLES.get());
+                    pOutput.accept(ModItems.MUMMIFIEDHAND.get());
+                    pOutput.accept(ModItems.MYSTICLIGHTER.get());
+                    pOutput.accept(ModItems.NUNCHAKU.get());
+                    pOutput.accept(ModItems.ODDLYSMOOTHSTONE.get());
+                    pOutput.accept(ModItems.OLDCOIN.get());
+                    pOutput.accept(ModItems.ORICHALCUM.get());
+                    pOutput.accept(ModItems.ORNAMENTALFAN.get());
+                    pOutput.accept(ModItems.ORRERY.get());
+                    pOutput.accept(ModItems.PANTOGRAPH.get());
+                    pOutput.accept(ModItems.PARRYINGSHIELD.get());
+                    pOutput.accept(ModItems.PEAR.get());
+                    pOutput.accept(ModItems.PENNIB.get());
+                    pOutput.accept(ModItems.PENDULUM.get());
+                    pOutput.accept(ModItems.PERMAFROST.get());
+                    pOutput.accept(ModItems.PETRIFIEDTOAD.get());
+                    pOutput.accept(ModItems.PLANISPHERE.get());
+                    pOutput.accept(ModItems.POCKETWATCH.get());
+                    pOutput.accept(ModItems.POLLINOUSCORE.get());
+                    pOutput.accept(ModItems.POTIONBELT.get());
+                    pOutput.accept(ModItems.PRAYERWHEEL.get());
+                    pOutput.accept(ModItems.PUNCHDAGGER.get());
+                    pOutput.accept(ModItems.RAINBOWRING.get());
+                    pOutput.accept(ModItems.RAZORTOOTH.get());
+                    pOutput.accept(ModItems.REDMASK.get());
+                    pOutput.accept(ModItems.REGALPILLOW.get());
+                    pOutput.accept(ModItems.REPTILETRINKET.get());
+                    pOutput.accept(ModItems.RINGINGTRIANGLE.get());
+                    pOutput.accept(ModItems.RIPPLEBASIN.get());
+                    pOutput.accept(ModItems.ROYALPOISON.get());
+                    pOutput.accept(ModItems.ROYALSTAMP.get());
+                    pOutput.accept(ModItems.SCREAMINGFLAGON.get());
+                    pOutput.accept(ModItems.SHOVEL.get());
+                    pOutput.accept(ModItems.SHURIKEN.get());
+                    pOutput.accept(ModItems.SLINGOFCOURAGE.get());
+                    pOutput.accept(ModItems.SPARKLINGROUGE.get());
+                    pOutput.accept(ModItems.STONECALENDAR.get());
+                    pOutput.accept(ModItems.STONECRACKER.get());
+                    pOutput.accept(ModItems.STRAWBERRY.get());
+                    pOutput.accept(ModItems.STRIKEDUMMY.get());
+                    pOutput.accept(ModItems.STURDYCLAMP.get());
+                    pOutput.accept(ModItems.SWORDOFJADE.get());
+                    pOutput.accept(ModItems.SWORDOFSTONE.get());
+                    pOutput.accept(ModItems.TEAOFDISCOURTESY.get());
+                    pOutput.accept(ModItems.THEABACUS.get());
+                    pOutput.accept(ModItems.THEBOOT.get());
+                    pOutput.accept(ModItems.THECOURIER.get());
+                    pOutput.accept(ModItems.TINYMAILBOX.get());
+                    pOutput.accept(ModItems.TOOLBOX.get());
+                    pOutput.accept(ModItems.TOXICEGG.get());
+                    pOutput.accept(ModItems.TUNGSTENROD.get());
+                    pOutput.accept(ModItems.TUNINGFORK.get());
+                    pOutput.accept(ModItems.UNCEASINGTOP.get());
+                    pOutput.accept(ModItems.UNSETTLINGLAMP.get());
+                    pOutput.accept(ModItems.VAJRA.get());
+                    pOutput.accept(ModItems.VAMBRACE.get());
+                    pOutput.accept(ModItems.VENERABLETEASET.get());
+                    pOutput.accept(ModItems.VEXINGPUZZLEBOX.get());
+                    pOutput.accept(ModItems.WARPAINT.get());
+                    pOutput.accept(ModItems.WHETSTONE.get());
+                    pOutput.accept(ModItems.WHITEBEASTSTATUE.get());
+                    pOutput.accept(ModItems.WHITESTAR.get());
+                    pOutput.accept(ModItems.WINGCHARM.get());
+                    pOutput.accept(ModItems.WONGOCUSTOMERAPPRECIATIONBADGE.get());
+                    pOutput.accept(ModItems.WONGOSMYSTERYTICKET.get());
                     }).build());
 
     public static void register(IEventBus eventBus) {

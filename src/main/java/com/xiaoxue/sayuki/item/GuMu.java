@@ -66,6 +66,11 @@ public class GuMu extends Item implements ICurioItem {
             "curse_of_the_bell", "bad_luck", "ascenders_bane", "enthralled", "folly"
     );
 
+    /** Blight IDs that cannot be stacked (only one instance per player). */
+    public static final Set<String> NON_STACKING_BLIGHTS = Set.of(
+            "hauntings", "durian", "scatter", "twist", "void"
+    );
+
     public GuMu(Properties properties) {
         super(properties);
     }

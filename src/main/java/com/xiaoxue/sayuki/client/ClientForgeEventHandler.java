@@ -7,11 +7,16 @@ import com.mojang.datafixers.util.Either;
 import com.xiaoxue.sayuki.Sayuki;
 import com.xiaoxue.sayuki.item.GuMu;
 import com.xiaoxue.sayuki.item.ModItems;
+import com.xiaoxue.sayuki.item.WingedBoots;
+import com.xiaoxue.sayuki.network.C2SMidAirJumpPacket;
+import com.xiaoxue.sayuki.network.ModNetwork;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderTooltipEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -41,5 +46,37 @@ public class ClientForgeEventHandler {
         for (var entry : counts.entrySet()) {
             elements.add(Either.right(new BlightIconTooltipData(entry.getKey(), entry.getValue())));
         }
+    }
+
+    // === Winged Boots: client detects mid-air jump press → sends packet ===
+
+    @SubscribeEvent
+    public static void onClientTickWingedBoots(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        if (mc.player.onGround()) return;
+        if (!mc.options.keyJump.isDown()) return;
+
+        // Only trigger once per press
+        if (mc.player.getPersistentData().getBoolean("SayukiWingedBootsJumpDown")) return;
+        mc.player.getPersistentData().putBoolean("SayukiWingedBootsJumpDown", true);
+
+        // Check if equipped
+        var boots = top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(mc.player).resolve()
+                .flatMap(handler -> handler.findFirstCurio(stack ->
+                        stack.getItem() == ModItems.WINGED_BOOTS.get()));
+        if (boots.isEmpty()) return;
+
+        ModNetwork.sendToServer(new C2SMidAirJumpPacket());
+    }
+
+    @SubscribeEvent
+    public static void onClientTickWingedBootsRelease(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        if (mc.options.keyJump.isDown()) return;
+        mc.player.getPersistentData().putBoolean("SayukiWingedBootsJumpDown", false);
     }
 }

@@ -6,6 +6,7 @@
 package com.xiaoxue.sayuki;
 
 import com.mojang.logging.LogUtils;
+import com.xiaoxue.sayuki.advancement.ModAdvancements;
 import com.xiaoxue.sayuki.block.ModBlocks;
 import com.xiaoxue.sayuki.client.ClientProxy;
 import com.xiaoxue.sayuki.effect.ModEffects;
@@ -69,6 +70,7 @@ public class Sayuki {
         LOGGER.info("Sayuki common setup");
 
         ModNetwork.init();
+        ModAdvancements.register();
 
         if (Config.logDirtBlock)
             LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(net.minecraft.world.level.block.Blocks.DIRT));

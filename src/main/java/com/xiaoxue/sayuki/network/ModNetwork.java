@@ -36,6 +36,11 @@ public class ModNetwork {
                 SPlayWorldSoundPacket::encode,
                 SPlayWorldSoundPacket::decode,
                 SPlayWorldSoundPacket::consume);
+
+        INSTANCE.registerMessage(nextID(), C2SMidAirJumpPacket.class,
+                C2SMidAirJumpPacket::encode,
+                C2SMidAirJumpPacket::decode,
+                C2SMidAirJumpPacket::consume);
     }
 
     public static <MSG> void sendTo(Player player, MSG msg) {

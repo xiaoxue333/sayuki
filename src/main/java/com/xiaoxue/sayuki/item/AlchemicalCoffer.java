@@ -22,6 +22,7 @@ public class AlchemicalCoffer extends Item implements ICurioItem {
 
     private static final UUID SLOT_MODIFIER_UUID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
     private static final int SLOT_BONUS = 4;
+    public static final int EFFECT_CAP_BONUS = 4;
 
     public AlchemicalCoffer(Properties properties) { super(properties); }
 

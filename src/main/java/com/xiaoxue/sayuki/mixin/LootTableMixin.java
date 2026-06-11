@@ -14,6 +14,7 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -35,9 +36,13 @@ import java.util.Map;
 @Mixin(LootTable.class)
 public abstract class LootTableMixin {
 
+    @Unique
     private static final ThreadLocal<Boolean> SAYUKI_LOOT_REENTRY = ThreadLocal.withInitial(() -> false);
+    @Unique
     private static Method getRandomItemsMethod;
+    @Unique
     private static List<ResourceLocation> chestLootTableIds;
+    @Unique
     private static MinecraftServer cachedServer;
 
     @Inject(method = "getRandomItems(Lnet/minecraft/world/level/storage/loot/LootContext;)Lit/unimi/dsi/fastutil/objects/ObjectArrayList;",

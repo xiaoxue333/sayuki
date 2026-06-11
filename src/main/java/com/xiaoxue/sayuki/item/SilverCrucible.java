@@ -10,6 +10,8 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import java.util.List;
 
 public class SilverCrucible extends Item implements ICurioItem {
+    public static final String PKEY_ACTIVATIONS = "SayukiSilverCrucibleActivations";
+    public static final String PKEY_USED_UP = "SayukiSilverCrucibleUsedUp";
     public SilverCrucible(Properties properties) { super(properties); }
 
     @Override

@@ -10,6 +10,7 @@ import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import java.util.List;
 
 public class WingedBoots extends Item implements ICurioItem {
+    public static final String PKEY_JUMPS = "SayukiWingedBootsJumps";
     public WingedBoots(Properties properties) { super(properties); }
 
     @Override
